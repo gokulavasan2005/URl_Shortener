@@ -50,7 +50,7 @@ RATE_LIMIT = 10
 # Short-code settings
 BASE62_CHARS = string.digits + string.ascii_letters  # 0-9 A-Z a-z
 SHORT_CODE_LENGTH = 6
-CUSTOM_ALIAS_PATTERN = re.compile(r"^[A-Za-z0-9_-]{3,30}$")
+CUSTOM_ALIAS_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,100}$")
 
 
 # ---------------------------------------------------------------------------
@@ -216,7 +216,7 @@ def shorten():
     if custom_alias:
         if not CUSTOM_ALIAS_PATTERN.match(custom_alias):
             return jsonify({
-                "error": "Alias must be 3–30 characters and contain only letters, digits, _ or -."
+                "error": "Alias must be 1–100 characters and contain only letters, digits, _ or -."
             }), 400
         if db.short_code_exists(custom_alias):
             return jsonify({"error": f"The alias '{custom_alias}' is already taken."}), 409
