@@ -24,8 +24,9 @@ from urllib.parse import urlparse
 
 from flask import (
     Flask, redirect, request, jsonify,
-    render_template, send_file, abort,
+    render_template, send_file, abort, session,
 )
+from werkzeug.security import generate_password_hash, check_password_hash
 
 import database as db
 
@@ -38,7 +39,7 @@ app = Flask(
     static_folder="static",
     template_folder="templates",
 )
-# Note: JSON_SORT_KEYS was removed in Flask 3.x — responses are unordered by default
+app.secret_key = os.environ.get("SECRET_KEY", "snapurl-super-secret-key-2026")
 
 # Initialise DB tables on import so gunicorn workers create them on cold start
 db.init_db()
@@ -124,6 +125,76 @@ def index():
 
 
 # ---------------------------------------------------------------------------
+# Auth routes
+# ---------------------------------------------------------------------------
+
+@app.route("/api/register", methods=["POST"])
+def register():
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip()
+    email = (data.get("email") or "").strip()
+    password = data.get("password") or ""
+
+    if not username or len(username) < 3:
+        return jsonify({"error": "Username must be at least 3 characters."}), 400
+    if not email or "@" not in email:
+        return jsonify({"error": "Valid email address is required."}), 400
+    if not password or len(password) < 6:
+        return jsonify({"error": "Password must be at least 6 characters."}), 400
+
+    if db.get_user_by_username(username):
+        return jsonify({"error": "Username is already taken."}), 409
+    if db.get_user_by_email(email):
+        return jsonify({"error": "Email is already registered."}), 409
+
+    pwd_hash = generate_password_hash(password)
+    try:
+        user = db.create_user(username, email, pwd_hash)
+        session["user_id"] = user["id"]
+        return jsonify({"message": "Registered successfully", "user": {"id": user["id"], "username": user["username"], "email": user["email"]}}), 201
+    except Exception as e:
+        app.logger.error("Error in registration: %s", e)
+        return jsonify({"error": "Could not register user."}), 500
+
+
+@app.route("/api/login", methods=["POST"])
+def login():
+    data = request.get_json(silent=True) or {}
+    login_id = (data.get("login") or "").strip()  # email or username
+    password = data.get("password") or ""
+
+    if not login_id or not password:
+        return jsonify({"error": "Username/Email and Password are required."}), 400
+
+    user = db.get_user_by_email(login_id) if "@" in login_id else db.get_user_by_username(login_id)
+    if not user or not check_password_hash(user["password_hash"], password):
+        return jsonify({"error": "Invalid credentials."}), 401
+
+    session["user_id"] = user["id"]
+    return jsonify({"message": "Logged in successfully", "user": {"id": user["id"], "username": user["username"], "email": user["email"]}}), 200
+
+
+@app.route("/api/logout", methods=["POST"])
+def logout():
+    session.pop("user_id", None)
+    return jsonify({"message": "Logged out successfully."}), 200
+
+
+@app.route("/api/me", methods=["GET"])
+def get_me():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"user": None}), 200
+
+    user = db.get_user_by_id(user_id)
+    if not user:
+        session.pop("user_id", None)
+        return jsonify({"user": None}), 200
+
+    return jsonify({"user": user}), 200
+
+
+# ---------------------------------------------------------------------------
 # POST /api/shorten
 # ---------------------------------------------------------------------------
 
@@ -166,7 +237,8 @@ def shorten():
 
     # --- rate limiting ---
     client_ip = get_client_ip()
-    if db.count_recent_urls_by_ip(client_ip) >= RATE_LIMIT:
+    user_id = session.get("user_id")
+    if not user_id and db.count_recent_urls_by_ip(client_ip) >= RATE_LIMIT:
         return jsonify({
             "error": f"Rate limit exceeded. You can create at most {RATE_LIMIT} links per hour."
         }), 429
@@ -174,7 +246,7 @@ def shorten():
     # --- create URL ---
     short_code = custom_alias if custom_alias else generate_short_code()
     try:
-        row = db.create_url(short_code, original_url, client_ip, expires_at)
+        row = db.create_url(short_code, original_url, client_ip, expires_at, user_id)
     except Exception as e:
         app.logger.error("DB error in /api/shorten: %s", e)
         return jsonify({"error": "Could not save URL. Please try again."}), 500
@@ -189,7 +261,8 @@ def shorten():
 
 @app.route("/api/urls", methods=["GET"])
 def list_urls():
-    rows     = db.get_all_urls()
+    user_id  = session.get("user_id")
+    rows     = db.get_all_urls(user_id=user_id)
     base_url = request.host_url.rstrip("/")
     return jsonify([row_to_api(r, base_url) for r in rows])
 

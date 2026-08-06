@@ -18,18 +18,23 @@
    Constants
    ========================================================= */
 const API = {
-  shorten : "/api/shorten",
-  urls    : "/api/urls",
-  stats   : (code) => `/api/stats/${code}`,
-  qr      : (code) => `/api/qr/${code}`,
-  delete  : (code) => `/api/urls/${code}`,
+  shorten  : "/api/shorten",
+  urls     : "/api/urls",
+  stats    : (code) => `/api/stats/${code}`,
+  qr       : (code) => `/api/qr/${code}`,
+  delete   : (code) => `/api/urls/${code}`,
+  register : "/api/register",
+  login    : "/api/login",
+  logout   : "/api/logout",
+  me       : "/api/me",
 };
 
 /* =========================================================
    State
    ========================================================= */
-let allUrls = [];       // full list from API, used for search filtering
+let allUrls = [];         // full list from API, used for search filtering
 let chartInstance = null; // holds active Chart.js instance
+let currentUser = null;   // holds logged in user object
 
 /* =========================================================
    DOM references
@@ -581,6 +586,154 @@ function getLast30Days() {
 }
 
 /* =========================================================
+   User Authentication Logic
+   ========================================================= */
+const authModal        = $("#auth-modal");
+const openLoginBtn     = $("#open-login-btn");
+const openRegisterBtn  = $("#open-register-btn");
+const authModalClose   = $("#auth-modal-close");
+const authTabLogin     = $("#auth-tab-login");
+const authTabRegister  = $("#auth-tab-register");
+const loginForm        = $("#login-form");
+const registerForm     = $("#register-form");
+const loginErrorMsg    = $("#login-error-msg");
+const regErrorMsg      = $("#reg-error-msg");
+const authLoggedOut    = $("#auth-logged-out");
+const authLoggedIn     = $("#auth-logged-in");
+const userChipName     = $("#user-chip-name");
+const logoutBtn        = $("#logout-btn");
+
+function updateAuthUI(user) {
+  currentUser = user;
+  if (user) {
+    userChipName.textContent = `👤 ${user.username}`;
+    authLoggedOut.style.display = "none";
+    authLoggedIn.style.display = "flex";
+  } else {
+    authLoggedOut.style.display = "flex";
+    authLoggedIn.style.display = "none";
+  }
+}
+
+async function checkAuthSession() {
+  try {
+    const res = await fetch(API.me);
+    const data = await res.json();
+    updateAuthUI(data.user);
+  } catch (err) {
+    updateAuthUI(null);
+  }
+}
+
+function openAuthModal(tab = "login") {
+  switchAuthTab(tab);
+  authModal.classList.add("open");
+}
+
+function closeAuthModal() {
+  authModal.classList.remove("open");
+  loginErrorMsg.classList.remove("visible");
+  regErrorMsg.classList.remove("visible");
+}
+
+function switchAuthTab(tab) {
+  if (tab === "login") {
+    authTabLogin.classList.add("active");
+    authTabRegister.classList.remove("active");
+    loginForm.style.display = "block";
+    registerForm.style.display = "none";
+  } else {
+    authTabRegister.classList.add("active");
+    authTabLogin.classList.remove("active");
+    registerForm.style.display = "block";
+    loginForm.style.display = "none";
+  }
+}
+
+openLoginBtn?.addEventListener("click", () => openAuthModal("login"));
+openRegisterBtn?.addEventListener("click", () => openAuthModal("register"));
+authModalClose?.addEventListener("click", closeAuthModal);
+authTabLogin?.addEventListener("click", () => switchAuthTab("login"));
+authTabRegister?.addEventListener("click", () => switchAuthTab("register"));
+
+authModal?.addEventListener("click", (e) => {
+  if (e.target === authModal) closeAuthModal();
+});
+
+// Login Form Submit
+loginForm?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  loginErrorMsg.classList.remove("visible");
+  const loginVal = $("#login-input-id").value.trim();
+  const pwdVal = $("#login-input-pwd").value;
+
+  try {
+    const res = await fetch(API.login, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ login: loginVal, password: pwdVal }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      loginErrorMsg.textContent = data.error || "Login failed.";
+      loginErrorMsg.classList.add("visible");
+      return;
+    }
+
+    updateAuthUI(data.user);
+    closeAuthModal();
+    showToast(`Welcome back, ${data.user.username}! 👋`, "success");
+    if (viewDashboard.classList.contains("active")) loadDashboard();
+  } catch (err) {
+    loginErrorMsg.textContent = "Network error during login.";
+    loginErrorMsg.classList.add("visible");
+  }
+});
+
+// Register Form Submit
+registerForm?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  regErrorMsg.classList.remove("visible");
+  const userVal = $("#reg-input-user").value.trim();
+  const emailVal = $("#reg-input-email").value.trim();
+  const pwdVal = $("#reg-input-pwd").value;
+
+  try {
+    const res = await fetch(API.register, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: userVal, email: emailVal, password: pwdVal }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      regErrorMsg.textContent = data.error || "Registration failed.";
+      regErrorMsg.classList.add("visible");
+      return;
+    }
+
+    updateAuthUI(data.user);
+    closeAuthModal();
+    showToast(`Account created! Welcome, ${data.user.username} 🎉`, "success");
+    if (viewDashboard.classList.contains("active")) loadDashboard();
+  } catch (err) {
+    regErrorMsg.textContent = "Network error during registration.";
+    regErrorMsg.classList.add("visible");
+  }
+});
+
+// Logout Button
+logoutBtn?.addEventListener("click", async () => {
+  try {
+    await fetch(API.logout, { method: "POST" });
+    updateAuthUI(null);
+    showToast("Logged out.", "info");
+    if (viewDashboard.classList.contains("active")) loadDashboard();
+  } catch {
+    showToast("Error logging out.", "error");
+  }
+});
+
+/* =========================================================
    Global exposure (for inline onclick handlers in table rows)
    ========================================================= */
 window.copyToClipboard = copyToClipboard;
@@ -591,8 +744,9 @@ window.deleteUrl       = deleteUrl;
 /* =========================================================
    Init
    ========================================================= */
-(function init() {
+(async function init() {
   showView("shorten");
+  await checkAuthSession();
 
   // Set min expiry to now
   const now = new Date();

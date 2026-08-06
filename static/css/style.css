@@ -210,6 +210,16 @@ img { max-width: 100%; display: block; }
   border-color: var(--border-accent);
 }
 
+.user-chip {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #a78bfa;
+  background: rgba(124,58,237,0.12);
+  border: 1px solid var(--border-accent);
+  padding: 0.35rem 0.85rem;
+  border-radius: 100px;
+}
+
 /* ---------- Main content ---------- */
 .main-content {
   flex: 1;

@@ -49,6 +49,16 @@
           <button class="nav-btn" id="nav-dashboard">
             📊 Dashboard
           </button>
+
+          <!-- Auth Navigation -->
+          <div id="auth-logged-out" style="display: flex; gap: 0.4rem; margin-left: 0.5rem;">
+            <button class="btn btn-sm btn-ghost" id="open-login-btn">Log In</button>
+            <button class="btn btn-sm btn-primary" id="open-register-btn" style="width: auto; margin-top: 0; padding: 0.45rem 0.9rem;">Sign Up</button>
+          </div>
+          <div id="auth-logged-in" style="display: none; align-items: center; gap: 0.5rem; margin-left: 0.5rem;">
+            <span class="user-chip" id="user-chip-name">👤 User</span>
+            <button class="btn btn-sm btn-ghost" id="logout-btn">Log Out</button>
+          </div>
         </div>
       </div>
     </nav>
@@ -292,6 +302,51 @@
     </div>
   </div>
 
+
+  <!-- ===================== AUTH MODAL ===================== -->
+  <div class="modal-backdrop" id="auth-modal" role="dialog" aria-modal="true" aria-label="Account Authentication">
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header">
+        <div class="auth-tab-buttons" style="display:flex;gap:0.5rem;">
+          <button class="nav-btn active" id="auth-tab-login">Log In</button>
+          <button class="nav-btn" id="auth-tab-register">Sign Up</button>
+        </div>
+        <button class="modal-close" id="auth-modal-close" aria-label="Close modal">✕</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form" style="display:block;">
+        <div class="form-group">
+          <label class="form-label" for="login-input-id">Username or Email</label>
+          <input type="text" class="form-input-plain" id="login-input-id" required placeholder="user or email@example.com" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="login-input-pwd">Password</label>
+          <input type="password" class="form-input-plain" id="login-input-pwd" required placeholder="••••••••" />
+        </div>
+        <p class="error-msg" id="login-error-msg" style="margin-bottom:0.75rem;"></p>
+        <button type="submit" class="btn btn-primary" id="login-submit-btn">🔐 Log In</button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="register-form" style="display:none;">
+        <div class="form-group">
+          <label class="form-label" for="reg-input-user">Username</label>
+          <input type="text" class="form-input-plain" id="reg-input-user" minlength="3" required placeholder="johndoe" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="reg-input-email">Email Address</label>
+          <input type="email" class="form-input-plain" id="reg-input-email" required placeholder="john@example.com" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="reg-input-pwd">Password</label>
+          <input type="password" class="form-input-plain" id="reg-input-pwd" minlength="6" required placeholder="At least 6 characters" />
+        </div>
+        <p class="error-msg" id="reg-error-msg" style="margin-bottom:0.75rem;"></p>
+        <button type="submit" class="btn btn-primary" id="reg-submit-btn">✨ Create Account</button>
+      </form>
+    </div>
+  </div>
 
   <!-- ===================== TOAST CONTAINER ===================== -->
   <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="false"></div>

@@ -33,6 +33,14 @@ if DATABASE_URL:
         try:
             with conn.cursor() as cur:
                 cur.execute("""
+                    CREATE TABLE IF NOT EXISTS users (
+                        id            SERIAL PRIMARY KEY,
+                        username      TEXT    NOT NULL UNIQUE,
+                        email         TEXT    NOT NULL UNIQUE,
+                        password_hash TEXT    NOT NULL,
+                        created_at    TIMESTAMP NOT NULL DEFAULT NOW()
+                    );
+
                     CREATE TABLE IF NOT EXISTS urls (
                         id          SERIAL PRIMARY KEY,
                         short_code  TEXT    NOT NULL UNIQUE,
@@ -40,11 +48,17 @@ if DATABASE_URL:
                         created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
                         expires_at  TIMESTAMP,
                         click_count INTEGER  NOT NULL DEFAULT 0,
-                        creator_ip  TEXT
+                        creator_ip  TEXT,
+                        user_id     INTEGER REFERENCES users(id) ON DELETE SET NULL
                     );
+
+                    ALTER TABLE urls ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
 
                     CREATE INDEX IF NOT EXISTS idx_urls_short_code
                         ON urls(short_code);
+
+                    CREATE INDEX IF NOT EXISTS idx_urls_user_id
+                        ON urls(user_id);
 
                     CREATE INDEX IF NOT EXISTS idx_urls_creator_ip_created
                         ON urls(creator_ip, created_at);
@@ -67,10 +81,60 @@ if DATABASE_URL:
         finally:
             conn.close()
 
+    # --- User helpers ------------------------------------------------------
+
+    def create_user(username: str, email: str, password_hash: str) -> dict:
+        conn = get_connection()
+        try:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    INSERT INTO users (username, email, password_hash)
+                    VALUES (%s, %s, %s)
+                    RETURNING id, username, email, created_at
+                    """,
+                    (username, email.lower(), password_hash),
+                )
+                row = cur.fetchone()
+            conn.commit()
+            return _row_to_dict(row)
+        finally:
+            conn.close()
+
+    def get_user_by_email(email: str) -> dict | None:
+        conn = get_connection()
+        try:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute("SELECT * FROM users WHERE email = %s", (email.lower(),))
+                row = cur.fetchone()
+            return _row_to_dict(row) if row else None
+        finally:
+            conn.close()
+
+    def get_user_by_username(username: str) -> dict | None:
+        conn = get_connection()
+        try:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute("SELECT * FROM users WHERE username = %s", (username,))
+                row = cur.fetchone()
+            return _row_to_dict(row) if row else None
+        finally:
+            conn.close()
+
+    def get_user_by_id(user_id: int) -> dict | None:
+        conn = get_connection()
+        try:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute("SELECT id, username, email, created_at FROM users WHERE id = %s", (user_id,))
+                row = cur.fetchone()
+            return _row_to_dict(row) if row else None
+        finally:
+            conn.close()
+
     # --- URL helpers -------------------------------------------------------
 
     def create_url(short_code: str, original_url: str, creator_ip: str,
-                   expires_at: str | None = None) -> dict:
+                   expires_at: str | None = None, user_id: int | None = None) -> dict:
         """
         Insert a new URL mapping.
         Returns the newly created row as a dict.
@@ -80,15 +144,14 @@ if DATABASE_URL:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute(
                     """
-                    INSERT INTO urls (short_code, original_url, creator_ip, expires_at)
-                    VALUES (%s, %s, %s, %s)
+                    INSERT INTO urls (short_code, original_url, creator_ip, expires_at, user_id)
+                    VALUES (%s, %s, %s, %s, %s)
                     RETURNING *
                     """,
-                    (short_code, original_url, creator_ip, expires_at),
+                    (short_code, original_url, creator_ip, expires_at, user_id),
                 )
                 row = cur.fetchone()
             conn.commit()
-            # Convert datetime objects to ISO strings for consistency
             return _row_to_dict(row)
         finally:
             conn.close()
@@ -104,12 +167,15 @@ if DATABASE_URL:
         finally:
             conn.close()
 
-    def get_all_urls() -> list[dict]:
-        """Return all URL rows ordered by creation date (newest first)."""
+    def get_all_urls(user_id: int | None = None) -> list[dict]:
+        """Return URL rows ordered by creation date (newest first). Filtered by user_id if supplied."""
         conn = get_connection()
         try:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                cur.execute("SELECT * FROM urls ORDER BY created_at DESC")
+                if user_id:
+                    cur.execute("SELECT * FROM urls WHERE user_id = %s ORDER BY created_at DESC", (user_id,))
+                else:
+                    cur.execute("SELECT * FROM urls WHERE user_id IS NULL ORDER BY created_at DESC")
                 rows = cur.fetchall()
             return [_row_to_dict(r) for r in rows]
         finally:
@@ -233,6 +299,14 @@ else:
         conn = get_connection()
         with conn:
             conn.executescript("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username      TEXT    NOT NULL UNIQUE,
+                    email         TEXT    NOT NULL UNIQUE,
+                    password_hash TEXT    NOT NULL,
+                    created_at    DATETIME NOT NULL DEFAULT (datetime('now'))
+                );
+
                 CREATE TABLE IF NOT EXISTS urls (
                     id          INTEGER PRIMARY KEY AUTOINCREMENT,
                     short_code  TEXT    NOT NULL UNIQUE,
@@ -240,7 +314,8 @@ else:
                     created_at  DATETIME NOT NULL DEFAULT (datetime('now')),
                     expires_at  DATETIME,               -- NULL means never expires
                     click_count INTEGER  NOT NULL DEFAULT 0,
-                    creator_ip  TEXT
+                    creator_ip  TEXT,
+                    user_id     INTEGER REFERENCES users(id) ON DELETE SET NULL
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_urls_short_code
@@ -263,12 +338,62 @@ else:
                 CREATE INDEX IF NOT EXISTS idx_clicks_clicked_at
                     ON clicks(clicked_at);
             """)
+            # Safely add user_id column if table already existed without it
+            try:
+                conn.execute("ALTER TABLE urls ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE SET NULL")
+            except Exception:
+                pass
+            try:
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_urls_user_id ON urls(user_id)")
+            except Exception:
+                pass
         conn.close()
+
+    # --- User helpers ------------------------------------------------------
+
+    def create_user(username: str, email: str, password_hash: str) -> dict:
+        conn = get_connection()
+        with conn:
+            cur = conn.execute(
+                """
+                INSERT INTO users (username, email, password_hash)
+                VALUES (?, ?, ?)
+                """,
+                (username, email.lower(), password_hash),
+            )
+            user_id = cur.lastrowid
+        row = get_user_by_id(user_id)
+        conn.close()
+        return row
+
+    def get_user_by_email(email: str) -> dict | None:
+        conn = get_connection()
+        row = conn.execute(
+            "SELECT * FROM users WHERE lower(email) = ?", (email.lower(),)
+        ).fetchone()
+        conn.close()
+        return dict(row) if row else None
+
+    def get_user_by_username(username: str) -> dict | None:
+        conn = get_connection()
+        row = conn.execute(
+            "SELECT * FROM users WHERE username = ?", (username,)
+        ).fetchone()
+        conn.close()
+        return dict(row) if row else None
+
+    def get_user_by_id(user_id: int) -> dict | None:
+        conn = get_connection()
+        row = conn.execute(
+            "SELECT id, username, email, created_at FROM users WHERE id = ?", (user_id,)
+        ).fetchone()
+        conn.close()
+        return dict(row) if row else None
 
     # --- URL helpers -------------------------------------------------------
 
     def create_url(short_code: str, original_url: str, creator_ip: str,
-                   expires_at: str | None = None) -> dict:
+                   expires_at: str | None = None, user_id: int | None = None) -> dict:
         """
         Insert a new URL mapping.
         Returns the newly created row as a dict.
@@ -278,10 +403,10 @@ else:
         with conn:
             conn.execute(
                 """
-                INSERT INTO urls (short_code, original_url, creator_ip, expires_at)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO urls (short_code, original_url, creator_ip, expires_at, user_id)
+                VALUES (?, ?, ?, ?, ?)
                 """,
-                (short_code, original_url, creator_ip, expires_at),
+                (short_code, original_url, creator_ip, expires_at, user_id),
             )
         row = get_url_by_code(short_code)
         conn.close()
@@ -296,12 +421,17 @@ else:
         conn.close()
         return dict(row) if row else None
 
-    def get_all_urls() -> list[dict]:
-        """Return all URL rows ordered by creation date (newest first)."""
+    def get_all_urls(user_id: int | None = None) -> list[dict]:
+        """Return URL rows ordered by creation date (newest first). Filtered by user_id if supplied."""
         conn = get_connection()
-        rows = conn.execute(
-            "SELECT * FROM urls ORDER BY created_at DESC"
-        ).fetchall()
+        if user_id:
+            rows = conn.execute(
+                "SELECT * FROM urls WHERE user_id = ? ORDER BY created_at DESC", (user_id,)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM urls WHERE user_id IS NULL ORDER BY created_at DESC"
+            ).fetchall()
         conn.close()
         return [dict(r) for r in rows]
 
