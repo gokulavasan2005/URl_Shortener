@@ -16,7 +16,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 
 if DATABASE_URL:
     # -----------------------------------------------------------------------
-    # PostgreSQL mode (Vercel / production)
+    # PostgreSQL mode (Render / production)
     # -----------------------------------------------------------------------
     import psycopg2
     import psycopg2.extras

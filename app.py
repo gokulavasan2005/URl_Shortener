@@ -40,6 +40,9 @@ app = Flask(
 )
 # Note: JSON_SORT_KEYS was removed in Flask 3.x — responses are unordered by default
 
+# Initialise DB tables on import so gunicorn workers create them on cold start
+db.init_db()
+
 # Rate-limit: max URLs a single IP may shorten per hour
 RATE_LIMIT = 10
 
@@ -291,12 +294,13 @@ def server_error(e):
 
 
 # ---------------------------------------------------------------------------
-# Entry point
+# Entry point (local development only — production uses gunicorn)
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    db.init_db()
+    debug = os.environ.get("FLASK_DEBUG", "false").lower() in ("1", "true", "yes")
+    port = int(os.environ.get("PORT", 5000))
     print("=" * 50)
-    print("  URL Shortener running at http://127.0.0.1:5000")
+    print(f"  URL Shortener running at http://127.0.0.1:{port}")
     print("=" * 50)
-    app.run(debug=True, port=5000)
+    app.run(debug=debug, host="0.0.0.0", port=port)

@@ -9,9 +9,12 @@ build/
 
 # Virtual environments
 venv/
+.venv/
+
+# Environment variables (secrets!)
 .env
 
-# Database (local only)
+# Database (local SQLite only)
 *.db
 
 # IDE
@@ -24,5 +27,5 @@ venv/
 .DS_Store
 Thumbs.db
 
-# Vercel
+# Vercel (legacy)
 .vercel/
