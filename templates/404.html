@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>404 — Link Not Found | SnapURL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #0a0a0f;
+      font-family: 'Inter', sans-serif;
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+      overflow: hidden;
+    }
+
+    /* animated background blobs */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before {
+      width: 500px; height: 500px;
+      background: #7c3aed;
+      top: -150px; left: -150px;
+    }
+    body::after {
+      width: 400px; height: 400px;
+      background: #06b6d4;
+      bottom: -100px; right: -100px;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 560px;
+    }
+
+    .error-code {
+      font-size: clamp(6rem, 20vw, 10rem);
+      font-weight: 900;
+      line-height: 1;
+      background: linear-gradient(135deg, #7c3aed, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -4px;
+      margin-bottom: 0.5rem;
+      animation: pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.8; }
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      color: #94a3b8;
+      font-size: 1rem;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+
+    .code-badge {
+      display: inline-block;
+      background: rgba(124,58,237,0.15);
+      border: 1px solid rgba(124,58,237,0.3);
+      border-radius: 6px;
+      padding: 0.2rem 0.6rem;
+      font-family: monospace;
+      font-size: 0.95rem;
+      color: #a78bfa;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.75rem;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #7c3aed, #0891b2);
+      color: white;
+      border: none;
+      box-shadow: 0 4px 24px rgba(124,58,237,0.4);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(124,58,237,0.55);
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: #94a3b8;
+      border: 1px solid rgba(255,255,255,0.1);
+      margin-left: 0.75rem;
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.1);
+      color: #e2e8f0;
+      transform: translateY(-2px);
+    }
+
+    .emoji { font-size: 4rem; margin-bottom: 1rem; display: block; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <span class="emoji">🔍</span>
+    <div class="error-code">404</div>
+    <h1>Link Not Found</h1>
+    {% if short_code %}
+    <p>
+      The short link <span class="code-badge">/{{ short_code }}</span> doesn't exist
+      or may have been deleted. Double-check the URL and try again.
+    </p>
+    {% else %}
+    <p>
+      The page you're looking for doesn't exist. It may have been moved or deleted.
+    </p>
+    {% endif %}
+    <div>
+      <a href="/" class="btn btn-primary">
+        ⚡ Create a New Link
+      </a>
+      <a href="javascript:history.back()" class="btn btn-secondary">
+        ← Go Back
+      </a>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- SEO -->
+  <title>SnapURL — Fast, Smart URL Shortener</title>
+  <meta name="description"
+    content="SnapURL is a free URL shortener with click analytics, QR code generation, custom aliases, and link expiration. Built with Flask + SQLite." />
+  <meta name="keywords" content="url shortener, link shortener, qr code, analytics, flask" />
+
+  <!-- Open Graph -->
+  <meta property="og:title"       content="SnapURL — Fast, Smart URL Shortener" />
+  <meta property="og:description" content="Shorten, track, and manage your links." />
+  <meta property="og:type"        content="website" />
+
+  <!-- Favicon (emoji) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="/static/css/style.css" />
+
+  <!-- Chart.js (loaded before closing body, defer would break canvas) -->
+</head>
+<body>
+
+  <!-- Animated Background -->
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="bg-orbs" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <div class="app-wrapper">
+
+    <!-- ===================== NAVBAR ===================== -->
+    <nav class="navbar" role="navigation" aria-label="Main Navigation">
+      <div class="container">
+        <div class="navbar-brand" aria-label="SnapURL Home">
+          <span class="brand-icon" aria-hidden="true">⚡</span>
+          SnapURL
+        </div>
+        <div class="navbar-nav">
+          <button class="nav-btn active" id="nav-shorten" aria-current="page">
+            🔗 Shorten
+          </button>
+          <button class="nav-btn" id="nav-dashboard">
+            📊 Dashboard
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ===================== MAIN CONTENT ===================== -->
+    <main class="main-content" role="main">
+      <div class="container">
+
+        <!-- =========== SHORTEN VIEW =========== -->
+        <section class="view active" id="view-shorten" aria-label="URL Shortener">
+
+          <!-- Hero -->
+          <div class="hero">
+            <div class="hero-badge">
+              ✨ Free &amp; Open Source
+            </div>
+            <h1>
+              Shorten URLs.<br />
+              <span class="gradient-text">Track Every Click.</span>
+            </h1>
+            <p class="hero-sub">
+              Transform long, messy links into clean short URLs — with analytics,
+              QR codes, custom aliases, and expiration dates. No account needed.
+            </p>
+          </div>
+
+          <!-- Stats Bar -->
+          <div class="stats-bar" aria-label="Quick Stats">
+            <div class="stat-chip">
+              <div class="stat-value" id="total-links">0</div>
+              <div class="stat-label">Links Created</div>
+            </div>
+            <div class="stat-chip">
+              <div class="stat-value" id="total-clicks">0</div>
+              <div class="stat-label">Total Clicks</div>
+            </div>
+            <div class="stat-chip">
+              <div class="stat-value" id="active-links">0</div>
+              <div class="stat-label">Active Links</div>
+            </div>
+          </div>
+
+          <!-- Shorten Card -->
+          <div class="shorten-card" role="region" aria-label="URL Shortener Form">
+            <form id="shorten-form" novalidate aria-label="Shorten a URL">
+
+              <!-- Main URL input -->
+              <div class="form-group">
+                <label class="form-label" for="input-url">Long URL *</label>
+                <div class="input-wrapper">
+                  <span class="input-icon" aria-hidden="true">🔗</span>
+                  <input
+                    type="url"
+                    class="form-input"
+                    id="input-url"
+                    name="url"
+                    placeholder="https://example.com/very-long-url..."
+                    autocomplete="off"
+                    spellcheck="false"
+                    required
+                    aria-required="true"
+                    aria-describedby="error-msg"
+                  />
+                </div>
+                <p class="error-msg" id="error-msg" role="alert" aria-live="polite"></p>
+              </div>
+
+              <!-- Optional row: custom alias + expiry -->
+              <div class="form-row">
+                <div class="form-group" style="margin-bottom:0">
+                  <label class="form-label" for="input-alias">Custom Alias (optional)</label>
+                  <input
+                    type="text"
+                    class="form-input-plain"
+                    id="input-alias"
+                    name="alias"
+                    placeholder="e.g. my-link"
+                    maxlength="30"
+                    pattern="[A-Za-z0-9_\-]+"
+                    aria-describedby="alias-hint"
+                  />
+                  <p class="error-msg" id="alias-hint" style="color:var(--text-muted);display:block;font-size:0.75rem;margin-top:0.3rem;">
+                    3–30 chars · letters, digits, _ and -
+                  </p>
+                </div>
+
+                <div class="form-group" style="margin-bottom:0">
+                  <label class="form-label" for="input-expiry">Expiry Date &amp; Time (optional)</label>
+                  <input
+                    type="datetime-local"
+                    class="form-input-plain"
+                    id="input-expiry"
+                    name="expires_at"
+                    aria-label="Optional expiry date and time"
+                  />
+                </div>
+              </div>
+
+              <!-- Submit -->
+              <button type="submit" class="btn btn-primary" id="submit-btn" aria-label="Shorten URL">
+                <span class="spinner d-none" id="submit-spinner" aria-hidden="true"></span>
+                <span id="submit-text">✨ Shorten URL</span>
+              </button>
+
+            </form>
+
+            <!-- Result Card -->
+            <div class="result-card" id="result-card" role="status" aria-live="polite" aria-label="Shortened URL Result">
+              <div class="result-label">
+                <span>✅</span> Your short link is ready
+              </div>
+              <div class="result-short-url">
+                <a class="result-link" id="result-link" target="_blank" rel="noopener" aria-label="Short URL">#</a>
+              </div>
+              <p class="result-original" id="result-original"></p>
+              <div class="result-meta">
+                <span class="meta-chip" id="result-created"></span>
+                <span class="meta-chip" id="result-expiry"></span>
+              </div>
+              <div class="result-actions">
+                <button class="btn btn-sm btn-copy" id="copy-main-btn" aria-label="Copy short URL">
+                  📋 Copy Link
+                </button>
+                <button class="btn btn-sm btn-qr" id="qr-main-btn" aria-label="Download QR code">
+                  ⬛ QR Code
+                </button>
+              </div>
+            </div>
+
+          </div><!-- /shorten-card -->
+
+          <!-- Feature pills -->
+          <div style="text-align:center;margin-top:2.5rem;display:flex;justify-content:center;flex-wrap:wrap;gap:0.6rem;">
+            <span class="meta-chip">⚡ Instant redirect</span>
+            <span class="meta-chip">📊 Click analytics</span>
+            <span class="meta-chip">🎨 Custom aliases</span>
+            <span class="meta-chip">⏰ Link expiration</span>
+            <span class="meta-chip">📱 QR code generation</span>
+            <span class="meta-chip">🔒 Rate limited</span>
+          </div>
+
+        </section><!-- /view-shorten -->
+
+
+        <!-- =========== DASHBOARD VIEW =========== -->
+        <section class="view" id="view-dashboard" aria-label="Links Dashboard">
+
+          <div class="section-header">
+            <h2 class="section-title">🔗 Your Links</h2>
+            <input
+              type="search"
+              class="search-input"
+              id="search-input"
+              placeholder="🔍 Search links…"
+              aria-label="Search short links"
+            />
+          </div>
+
+          <div class="table-wrapper" role="region" aria-label="Shortened URLs Table">
+            <table class="url-table" aria-label="All shortened URLs">
+              <thead>
+                <tr>
+                  <th scope="col">Short Code</th>
+                  <th scope="col">Original URL</th>
+                  <th scope="col">Clicks</th>
+                  <th scope="col">Created</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-body">
+                <!-- JS rendered -->
+              </tbody>
+            </table>
+          </div>
+
+        </section><!-- /view-dashboard -->
+
+      </div><!-- /container -->
+    </main><!-- /main-content -->
+
+    <!-- ===================== FOOTER ===================== -->
+    <footer class="footer" role="contentinfo">
+      Built with ❤️ using <span>Flask + SQLite</span> · College Mini Project · SnapURL
+    </footer>
+
+  </div><!-- /app-wrapper -->
+
+
+  <!-- ===================== CHART MODAL ===================== -->
+  <div class="modal-backdrop" id="chart-modal" role="dialog" aria-modal="true" aria-labelledby="chart-modal-title">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" id="chart-modal-title">Analytics</div>
+          <div class="modal-subtitle" id="chart-modal-subtitle"></div>
+        </div>
+        <button class="modal-close" id="chart-modal-close" aria-label="Close analytics modal">✕</button>
+      </div>
+
+      <!-- Chart -->
+      <div class="chart-container">
+        <canvas id="analytics-chart" aria-label="Clicks over time bar chart" role="img"></canvas>
+      </div>
+
+      <!-- Summary Stats -->
+      <div class="chart-stats-row">
+        <div class="chart-stat">
+          <div class="chart-stat-value" id="chart-total-clicks">—</div>
+          <div class="chart-stat-label">Total Clicks</div>
+        </div>
+        <div class="chart-stat">
+          <div class="chart-stat-value" id="chart-created">—</div>
+          <div class="chart-stat-label">Created</div>
+        </div>
+        <div class="chart-stat">
+          <div class="chart-stat-value" id="chart-status">—</div>
+          <div class="chart-stat-label">Status</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ===================== QR MODAL ===================== -->
+  <div class="modal-backdrop" id="qr-modal" role="dialog" aria-modal="true" aria-label="QR Code">
+    <div class="modal" style="max-width:380px;">
+      <div class="modal-header">
+        <div class="modal-title">📱 QR Code</div>
+        <button class="modal-close" id="qr-modal-close" aria-label="Close QR modal">✕</button>
+      </div>
+      <div class="qr-container">
+        <img class="qr-img" id="qr-image" alt="QR code for short URL" />
+        <div class="qr-url" id="qr-short-url"></div>
+        <a class="btn btn-primary" id="qr-download-btn" download aria-label="Download QR code image"
+           style="width:100%;margin-top:0;">
+          ⬇️ Download QR Code
+        </a>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ===================== TOAST CONTAINER ===================== -->
+  <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+
+  <!-- ===================== SCRIPTS ===================== -->
+  <!-- Chart.js from CDN (only for charting — no other external dependencies) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="/static/js/app.js"></script>
+
+</body>
+</html>
