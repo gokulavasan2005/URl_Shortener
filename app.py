@@ -235,13 +235,13 @@ def shorten():
         except ValueError:
             return jsonify({"error": "Invalid expiry date format."}), 400
 
+    # --- auth check ---
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Authentication required. Please log in or sign up to shorten links."}), 401
+
     # --- rate limiting ---
     client_ip = get_client_ip()
-    user_id = session.get("user_id")
-    if not user_id and db.count_recent_urls_by_ip(client_ip) >= RATE_LIMIT:
-        return jsonify({
-            "error": f"Rate limit exceeded. You can create at most {RATE_LIMIT} links per hour."
-        }), 429
 
     # --- create URL ---
     short_code = custom_alias if custom_alias else generate_short_code()

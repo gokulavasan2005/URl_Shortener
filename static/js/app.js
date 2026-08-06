@@ -113,6 +113,13 @@ shortenForm.addEventListener("submit", async (e) => {
   const alias    = inputAlias.value.trim();
   const expiry   = inputExpiry.value;
 
+  // Check login requirement
+  if (!currentUser) {
+    showError("🔒 Please log in or sign up first to shorten links.");
+    openAuthModal("login");
+    return;
+  }
+
   // Client-side quick validation
   if (!url) {
     showError("Please enter a URL.");
