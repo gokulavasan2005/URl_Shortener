@@ -759,4 +759,27 @@ window.deleteUrl       = deleteUrl;
   const now = new Date();
   now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
   inputExpiry.min = now.toISOString().slice(0, 16);
+  init3DTilt();
 })();
+
+/* =========================================================
+   Interactive 3D Tilt FX
+   ========================================================= */
+function init3DTilt() {
+  document.querySelectorAll(".tilt-card, .hero-3d-wrapper").forEach((card) => {
+    card.addEventListener("mousemove", (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const rotateX = ((y - centerY) / centerY) * -10;
+      const rotateY = ((x - centerX) / centerX) * 10;
+      card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+    });
+
+    card.addEventListener("mouseleave", () => {
+      card.style.transform = "perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)";
+    });
+  });
+}

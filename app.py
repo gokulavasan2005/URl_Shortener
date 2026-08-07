@@ -312,7 +312,7 @@ def qr_code(short_code):
         short_url = f"{request.host_url.rstrip('/')}/{short_code}"
         img = qrcode.make(short_url)
         buf = io.BytesIO()
-        img.save(buf, format="PNG")
+        img.save(buf)
         buf.seek(0)
         return send_file(buf, mimetype="image/png",
                          download_name=f"{short_code}_qr.png")

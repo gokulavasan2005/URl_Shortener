@@ -70,36 +70,48 @@
         <!-- =========== SHORTEN VIEW =========== -->
         <section class="view active" id="view-shorten" aria-label="URL Shortener">
 
-          <!-- Hero -->
-          <div class="hero">
-            <div class="hero-badge">
-              ✨ Free &amp; Open Source
-            </div>
-            <h1>
-              Welcome to<br />
-              <span class="gradient-text">Gokul URL Shortener</span>
-            </h1>
-            <p class="hero-sub">
-              Transform long, messy links into clean short URLs — with analytics,
-              QR codes, custom aliases, and expiration dates. Log in or create an account to get started.
-            </p>
-          </div>
+          <!-- Hero Grid Layout -->
+          <div class="hero-grid">
+            
+            <!-- Left Hero Content -->
+            <div class="hero-left">
+              <div class="hero-badge">
+                <span class="badge-icon">⚡</span> 3D-Powered Enterprise URL Engine
+              </div>
+              <h1 class="hero-title">
+                Shorten, Track &amp;<br />
+                <span class="gradient-text">Supercharge Links</span>
+              </h1>
+              <p class="hero-sub">
+                Transform long, cluttered URLs into sleek branded short links. Track detailed click metrics, generate custom 3D QR codes, and set automated link expirations.
+              </p>
 
-          <!-- Stats Bar -->
-          <div class="stats-bar" aria-label="Quick Stats">
-            <div class="stat-chip">
-              <div class="stat-value" id="total-links">0</div>
-              <div class="stat-label">Links Created</div>
+              <!-- Stats Bar -->
+              <div class="stats-bar" aria-label="Quick Stats">
+                <div class="stat-chip">
+                  <div class="stat-value" id="total-links">0</div>
+                  <div class="stat-label">Links Created</div>
+                </div>
+                <div class="stat-chip">
+                  <div class="stat-value" id="total-clicks">0</div>
+                  <div class="stat-label">Total Clicks</div>
+                </div>
+                <div class="stat-chip">
+                  <div class="stat-value" id="active-links">0</div>
+                  <div class="stat-label">Active Links</div>
+                </div>
+              </div>
             </div>
-            <div class="stat-chip">
-              <div class="stat-value" id="total-clicks">0</div>
-              <div class="stat-label">Total Clicks</div>
+
+            <!-- Right 3D Visual Asset -->
+            <div class="hero-right">
+              <div class="hero-3d-wrapper">
+                <div class="hero-3d-glow"></div>
+                <img src="/static/images/hero_3d.png" alt="Futuristic 3D URL Shortener Artwork" class="hero-3d-img" />
+              </div>
             </div>
-            <div class="stat-chip">
-              <div class="stat-value" id="active-links">0</div>
-              <div class="stat-label">Active Links</div>
-            </div>
-          </div>
+
+          </div><!-- /hero-grid -->
 
           <!-- Shorten Card -->
           <div class="shorten-card" role="region" aria-label="URL Shortener Form">
@@ -115,7 +127,7 @@
                     class="form-input"
                     id="input-url"
                     name="url"
-                    placeholder="https://example.com/very-long-url..."
+                    placeholder="https://example.com/very-long-url-to-shorten..."
                     autocomplete="off"
                     spellcheck="false"
                     required
@@ -160,7 +172,7 @@
               <!-- Submit -->
               <button type="submit" class="btn btn-primary" id="submit-btn" aria-label="Shorten URL">
                 <span class="spinner d-none" id="submit-spinner" aria-hidden="true"></span>
-                <span id="submit-text">✨ Shorten URL</span>
+                <span id="submit-text">✨ Shorten URL Now</span>
               </button>
 
             </form>
@@ -190,14 +202,50 @@
 
           </div><!-- /shorten-card -->
 
-          <!-- Feature pills -->
-          <div style="text-align:center;margin-top:2.5rem;display:flex;justify-content:center;flex-wrap:wrap;gap:0.6rem;">
-            <span class="meta-chip">⚡ Instant redirect</span>
-            <span class="meta-chip">📊 Click analytics</span>
-            <span class="meta-chip">🎨 Custom aliases</span>
-            <span class="meta-chip">⏰ Link expiration</span>
-            <span class="meta-chip">📱 QR code generation</span>
-            <span class="meta-chip">🔒 Rate limited</span>
+          <!-- 3D Features Showcase Section -->
+          <div class="features-showcase">
+            <h2 class="features-title">Designed for Performance &amp; Style</h2>
+            <p class="features-subtitle">Powerful tools wrapped in a high-performance 3D interface</p>
+
+            <div class="features-grid">
+              
+              <!-- Feature 1 -->
+              <div class="feature-card tilt-card">
+                <div class="feature-img-wrapper">
+                  <img src="/static/images/feature_link.png" alt="3D Link Shortening Icon" class="feature-3d-img" />
+                </div>
+                <h3>Smart Custom Shortening</h3>
+                <p>Create branded, ultra-fast short links with custom slug aliases to boost click-through rates.</p>
+              </div>
+
+              <!-- Feature 2 -->
+              <div class="feature-card tilt-card">
+                <div class="feature-img-wrapper">
+                  <img src="/static/images/feature_analytics.png" alt="3D Analytics Icon" class="feature-3d-img" />
+                </div>
+                <h3>Deep Click Analytics</h3>
+                <p>Monitor visitor clicks, time series performance, and distribution with built-in Chart.js visual analytics.</p>
+              </div>
+
+              <!-- Feature 3 -->
+              <div class="feature-card tilt-card">
+                <div class="feature-img-wrapper">
+                  <img src="/static/images/feature_qr.png" alt="3D QR Code Icon" class="feature-3d-img" />
+                </div>
+                <h3>Vector QR Code Generation</h3>
+                <p>Instantly render high-resolution QR codes for print media, social campaigns, and instant mobile scanning.</p>
+              </div>
+
+              <!-- Feature 4 -->
+              <div class="feature-card tilt-card">
+                <div class="feature-img-wrapper">
+                  <img src="/static/images/feature_security.png" alt="3D Security Icon" class="feature-3d-img" />
+                </div>
+                <h3>Expiration &amp; Security</h3>
+                <p>Set custom date &amp; time expirations for temporary campaigns with built-in rate-limiting defense.</p>
+              </div>
+
+            </div>
           </div>
 
         </section><!-- /view-shorten -->
