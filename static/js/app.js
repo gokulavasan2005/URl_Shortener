@@ -1134,7 +1134,7 @@ if (document.readyState === "loading") {
 }
 
 /* =========================================================
-   SPOOKY GHOST 3D AVATAR ENGINE (Three.js WebGL)
+   3D MALE CHARACTER AVATAR ENGINE (Three.js WebGL)
    ========================================================= */
 class AuthAvatar3DEngine {
   constructor(canvasId) {
@@ -1153,7 +1153,7 @@ class AuthAvatar3DEngine {
     this.teardrops = [];
 
     this.initScene();
-    this.createGhostAvatars();
+    this.createManAvatar();
     this.bindEvents();
     this.animate();
   }
@@ -1162,7 +1162,7 @@ class AuthAvatar3DEngine {
     this.scene = new THREE.Scene();
 
     this.camera = new THREE.PerspectiveCamera(45, this.width / this.height, 0.1, 100);
-    this.camera.position.set(0, 0.1, 4.8);
+    this.camera.position.set(0, 0.2, 5.2);
 
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
@@ -1173,41 +1173,51 @@ class AuthAvatar3DEngine {
     this.renderer.setSize(this.width, this.height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // Soft Spooky Glow Lighting
+    // Studio Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.8);
     this.scene.add(ambientLight);
 
-    const purpleLight = new THREE.PointLight(0xa855f7, 2.5, 10);
-    purpleLight.position.set(-2.5, 3, 3);
-    this.scene.add(purpleLight);
+    const mainLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    mainLight.position.set(2, 4, 3);
+    this.scene.add(mainLight);
 
-    const cyanLight = new THREE.PointLight(0x06b6d4, 2.0, 10);
-    cyanLight.position.set(2.5, -2, 3);
-    this.scene.add(cyanLight);
+    const cyanPoint = new THREE.PointLight(0x06b6d4, 2.0, 10);
+    cyanPoint.position.set(-3, 2, 3);
+    this.scene.add(cyanPoint);
+
+    const violetPoint = new THREE.PointLight(0xa855f7, 2.0, 10);
+    violetPoint.position.set(3, -2, 3);
+    this.scene.add(violetPoint);
   }
 
-  createGhostAvatars() {
-    this.ghostsGroup = new THREE.Group();
-    this.scene.add(this.ghostsGroup);
+  createManAvatar() {
+    this.avatarGroup = new THREE.Group();
+    this.scene.add(this.avatarGroup);
 
-    // Soft Ghost Material
-    this.ghostMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      emissive: 0xf0fdfa,
-      emissiveIntensity: 0.8,
-      roughness: 0.1,
-      metalness: 0.1,
-      transparent: true,
-      opacity: 0.96,
+    // Materials
+    const skinMaterial = new THREE.MeshStandardMaterial({
+      color: 0xf1c27d,
+      roughness: 0.45,
+      metalness: 0.05,
     });
 
-    const blushMaterial = new THREE.MeshStandardMaterial({
-      color: 0xff7aa2,
-      emissive: 0xff7aa2,
-      emissiveIntensity: 0.9,
+    const hairMaterial = new THREE.MeshStandardMaterial({
+      color: 0x2c1d11,
+      roughness: 0.6,
     });
 
-    const faceDarkMaterial = new THREE.MeshBasicMaterial({ color: 0x181825 });
+    const jacketMaterial = new THREE.MeshStandardMaterial({
+      color: 0x4f46e5,
+      roughness: 0.3,
+    });
+
+    const shirtMaterial = new THREE.MeshStandardMaterial({
+      color: 0x1e1b4b,
+      roughness: 0.5,
+    });
+
+    const eyeWhiteMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const eyePupilMaterial = new THREE.MeshBasicMaterial({ color: 0x181825 });
     const tearMaterial = new THREE.MeshStandardMaterial({
       color: 0x38bdf8,
       emissive: 0x0284c7,
@@ -1215,127 +1225,154 @@ class AuthAvatar3DEngine {
       roughness: 0.1,
     });
 
-    // ================= 1. MAIN GHOST =================
-    this.mainGhostGroup = new THREE.Group();
-    this.mainGhostGroup.position.set(0.4, -0.1, 0);
-    this.ghostsGroup.add(this.mainGhostGroup);
+    // 1. Torso & Jacket
+    const torsoGeo = new THREE.CylinderGeometry(0.75, 0.6, 1.3, 24);
+    const torsoMesh = new THREE.Mesh(torsoGeo, jacketMaterial);
+    torsoMesh.position.y = -1.2;
+    this.avatarGroup.add(torsoMesh);
 
-    // Body Capsule (Head + Torso)
+    const shirtInnerGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.32, 16);
+    const shirtInnerMesh = new THREE.Mesh(shirtInnerGeo, shirtMaterial);
+    shirtInnerMesh.position.set(0, -1.2, 0.1);
+    this.avatarGroup.add(shirtInnerMesh);
+
+    // 2. Neck
+    const neckGeo = new THREE.CylinderGeometry(0.28, 0.3, 0.4, 16);
+    const neckMesh = new THREE.Mesh(neckGeo, skinMaterial);
+    neckMesh.position.y = -0.42;
+    this.avatarGroup.add(neckMesh);
+
+    // 3. Head Assembly Group
+    this.headGroup = new THREE.Group();
+    this.headGroup.position.y = 0.25;
+    this.avatarGroup.add(this.headGroup);
+
+    // Head Base Sphere
     const headGeo = new THREE.SphereGeometry(0.75, 32, 32);
-    const headMesh = new THREE.Mesh(headGeo, this.ghostMaterial);
-    this.mainGhostGroup.add(headMesh);
+    const headMesh = new THREE.Mesh(headGeo, skinMaterial);
+    this.headGroup.add(headMesh);
 
-    const bodyGeo = new THREE.CylinderGeometry(0.75, 0.9, 0.9, 32);
-    const bodyMesh = new THREE.Mesh(bodyGeo, this.ghostMaterial);
-    bodyMesh.position.y = -0.45;
-    this.mainGhostGroup.add(bodyMesh);
+    // Stylish 3D Hair Cap
+    const hairGeo = new THREE.SphereGeometry(0.78, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.55);
+    const hairMesh = new THREE.Mesh(hairGeo, hairMaterial);
+    hairMesh.rotation.x = -0.2;
+    hairMesh.position.set(0, 0.08, -0.02);
+    this.headGroup.add(hairMesh);
 
-    // Wavy Skirt Bottom
-    const skirtGeo = new THREE.ConeGeometry(1.0, 0.5, 32);
-    const skirtMesh = new THREE.Mesh(skirtGeo, this.ghostMaterial);
-    skirtMesh.rotation.x = Math.PI;
-    skirtMesh.position.y = -0.95;
-    this.mainGhostGroup.add(skirtMesh);
+    // Hair Quiff / Bangs Tuft
+    const quiffGeo = new THREE.SphereGeometry(0.35, 16, 16);
+    const quiffMesh = new THREE.Mesh(quiffGeo, hairMaterial);
+    quiffMesh.scale.set(1.4, 0.8, 1.0);
+    quiffMesh.position.set(0, 0.68, 0.35);
+    quiffMesh.rotation.x = 0.4;
+    this.headGroup.add(quiffMesh);
 
-    // Blush Cheeks
-    const cheekGeo = new THREE.SphereGeometry(0.1, 12, 12);
-    const leftCheek = new THREE.Mesh(cheekGeo, blushMaterial);
-    leftCheek.position.set(-0.4, 0.05, 0.65);
-    this.mainGhostGroup.add(leftCheek);
+    // Ears
+    const earGeo = new THREE.SphereGeometry(0.14, 12, 12);
+    const leftEar = new THREE.Mesh(earGeo, skinMaterial);
+    leftEar.scale.set(0.6, 1.2, 0.8);
+    leftEar.position.set(-0.72, 0.05, 0);
+    this.headGroup.add(leftEar);
 
-    const rightCheek = new THREE.Mesh(cheekGeo, blushMaterial);
-    rightCheek.position.set(0.4, 0.05, 0.65);
-    this.mainGhostGroup.add(rightCheek);
+    const rightEar = new THREE.Mesh(earGeo, skinMaterial);
+    rightEar.scale.set(0.6, 1.2, 0.8);
+    rightEar.position.set(0.72, 0.05, 0);
+    this.headGroup.add(rightEar);
 
-    // Main Ghost Face Features Group
-    this.mainFaceGroup = new THREE.Group();
-    this.mainGhostGroup.add(this.mainFaceGroup);
+    // Nose Tip
+    const noseGeo = new THREE.SphereGeometry(0.09, 12, 12);
+    const noseMesh = new THREE.Mesh(noseGeo, skinMaterial);
+    noseMesh.position.set(0, 0.02, 0.76);
+    this.headGroup.add(noseMesh);
 
     // Eyes
-    const eyeGeo = new THREE.SphereGeometry(0.09, 16, 16);
-    this.mainLeftEye = new THREE.Mesh(eyeGeo, faceDarkMaterial);
-    this.mainLeftEye.position.set(-0.24, 0.22, 0.7);
-    this.mainFaceGroup.add(this.mainLeftEye);
+    const eyeScleraGeo = new THREE.SphereGeometry(0.11, 16, 16);
+    const eyePupilGeo = new THREE.SphereGeometry(0.065, 16, 16);
 
-    this.mainRightEye = new THREE.Mesh(eyeGeo, faceDarkMaterial);
-    this.mainRightEye.position.set(0.24, 0.22, 0.7);
-    this.mainFaceGroup.add(this.mainRightEye);
+    // Left Eye
+    const leftSclera = new THREE.Mesh(eyeScleraGeo, eyeWhiteMaterial);
+    leftSclera.position.set(-0.25, 0.15, 0.68);
+    this.headGroup.add(leftSclera);
 
-    // Normal Mouth (Cute Arc)
-    const mouthGeo = new THREE.TorusGeometry(0.12, 0.035, 12, 24, Math.PI);
-    this.mainMouthNormal = new THREE.Mesh(mouthGeo, faceDarkMaterial);
-    this.mainMouthNormal.rotation.x = Math.PI;
-    this.mainMouthNormal.position.set(0, 0.08, 0.72);
-    this.mainFaceGroup.add(this.mainMouthNormal);
+    this.leftPupil = new THREE.Mesh(eyePupilGeo, eyePupilMaterial);
+    this.leftPupil.position.set(-0.25, 0.15, 0.76);
+    this.headGroup.add(this.leftPupil);
 
-    // Smile Mouth (Big Happy Oval)
-    const smileMouthGeo = new THREE.SphereGeometry(0.14, 16, 16);
-    this.mainMouthSmile = new THREE.Mesh(smileMouthGeo, faceDarkMaterial);
-    this.mainMouthSmile.scale.set(1.2, 0.8, 0.3);
-    this.mainMouthSmile.position.set(0, 0.05, 0.72);
-    this.mainMouthSmile.visible = false;
-    this.mainFaceGroup.add(this.mainMouthSmile);
+    // Right Eye
+    const rightSclera = new THREE.Mesh(eyeScleraGeo, eyeWhiteMaterial);
+    rightSclera.position.set(0.25, 0.15, 0.68);
+    this.headGroup.add(rightSclera);
 
-    // Cry Mouth (Sad Wavy Arc)
-    const cryMouthGeo = new THREE.TorusGeometry(0.12, 0.035, 12, 24, Math.PI);
-    this.mainMouthCry = new THREE.Mesh(cryMouthGeo, faceDarkMaterial);
-    this.mainMouthCry.position.set(0, -0.02, 0.72);
-    this.mainMouthCry.visible = false;
-    this.mainFaceGroup.add(this.mainMouthCry);
+    this.rightPupil = new THREE.Mesh(eyePupilGeo, eyePupilMaterial);
+    this.rightPupil.position.set(0.25, 0.15, 0.76);
+    this.headGroup.add(this.rightPupil);
 
-    // Arms for Covering Eyes
-    const armGeo = new THREE.CapsuleGeometry(0.12, 0.4, 8, 16);
-    this.mainLeftArm = new THREE.Mesh(armGeo, this.ghostMaterial);
-    this.mainLeftArm.position.set(-0.8, -0.2, 0.2);
-    this.mainGhostGroup.add(this.mainLeftArm);
+    // Eyebrows
+    const browGeo = new THREE.BoxGeometry(0.22, 0.04, 0.04);
+    this.leftBrow = new THREE.Mesh(browGeo, hairMaterial);
+    this.leftBrow.position.set(-0.25, 0.32, 0.72);
+    this.leftBrow.rotation.z = 0.05;
+    this.headGroup.add(this.leftBrow);
 
-    this.mainRightArm = new THREE.Mesh(armGeo, this.ghostMaterial);
-    this.mainRightArm.position.set(0.8, -0.2, 0.2);
-    this.mainGhostGroup.add(this.mainRightArm);
+    this.rightBrow = new THREE.Mesh(browGeo, hairMaterial);
+    this.rightBrow.position.set(0.25, 0.32, 0.72);
+    this.rightBrow.rotation.z = -0.05;
+    this.headGroup.add(this.rightBrow);
 
+    // Mouth Variants
+    // 1. Normal Mouth Arc
+    const mouthNormalGeo = new THREE.TorusGeometry(0.12, 0.03, 12, 24, Math.PI);
+    this.mouthNormal = new THREE.Mesh(mouthNormalGeo, eyePupilMaterial);
+    this.mouthNormal.rotation.x = Math.PI;
+    this.mouthNormal.position.set(0, -0.18, 0.72);
+    this.headGroup.add(this.mouthNormal);
 
-    // ================= 2. MINI GHOST COMPANION =================
-    this.miniGhostGroup = new THREE.Group();
-    this.miniGhostGroup.position.set(-0.95, -0.35, 0.2);
-    this.ghostsGroup.add(this.miniGhostGroup);
+    // 2. Happy Smile Mouth (Big Grin)
+    const mouthSmileGeo = new THREE.SphereGeometry(0.16, 16, 16);
+    this.mouthSmile = new THREE.Mesh(mouthSmileGeo, eyePupilMaterial);
+    this.mouthSmile.scale.set(1.2, 0.7, 0.3);
+    this.mouthSmile.position.set(0, -0.18, 0.72);
+    this.mouthSmile.visible = false;
+    this.headGroup.add(this.mouthSmile);
 
-    const miniHeadGeo = new THREE.SphereGeometry(0.48, 24, 24);
-    const miniHeadMesh = new THREE.Mesh(miniHeadGeo, this.ghostMaterial);
-    this.miniGhostGroup.add(miniHeadMesh);
+    // 3. Cry Sad Mouth (Wavy Inverted Arc)
+    const mouthCryGeo = new THREE.TorusGeometry(0.12, 0.03, 12, 24, Math.PI);
+    this.mouthCry = new THREE.Mesh(mouthCryGeo, eyePupilMaterial);
+    this.mouthCry.position.set(0, -0.24, 0.72);
+    this.mouthCry.visible = false;
+    this.headGroup.add(this.mouthCry);
 
-    const miniBodyGeo = new THREE.CylinderGeometry(0.48, 0.55, 0.55, 24);
-    const miniBodyMesh = new THREE.Mesh(miniBodyGeo, this.ghostMaterial);
-    miniBodyMesh.position.y = -0.28;
-    this.miniGhostGroup.add(miniBodyMesh);
+    // 4. Jointed Arms for Eye Covering Animation
+    const armGeo = new THREE.CylinderGeometry(0.14, 0.12, 0.95, 16);
+    const handGeo = new THREE.SphereGeometry(0.18, 14, 14);
 
-    // Mini Ghost Cheeks
-    const miniCheekGeo = new THREE.SphereGeometry(0.075, 12, 12);
-    const miniLeftCheek = new THREE.Mesh(miniCheekGeo, blushMaterial);
-    miniLeftCheek.position.set(-0.25, 0.02, 0.42);
-    this.miniGhostGroup.add(miniLeftCheek);
+    // Left Arm
+    this.leftArmGroup = new THREE.Group();
+    this.leftArmGroup.position.set(-0.82, -0.7, 0);
+    this.avatarGroup.add(this.leftArmGroup);
 
-    const miniRightCheek = new THREE.Mesh(miniCheekGeo, blushMaterial);
-    miniRightCheek.position.set(0.25, 0.02, 0.42);
-    this.miniGhostGroup.add(miniRightCheek);
+    const leftArmMesh = new THREE.Mesh(armGeo, jacketMaterial);
+    leftArmMesh.position.y = -0.42;
+    this.leftArmGroup.add(leftArmMesh);
 
-    // Mini Ghost Eyes & Mouth
-    const miniEyeGeo = new THREE.SphereGeometry(0.065, 12, 12);
-    this.miniLeftEye = new THREE.Mesh(miniEyeGeo, faceDarkMaterial);
-    this.miniLeftEye.position.set(-0.16, 0.14, 0.44);
-    this.miniGhostGroup.add(this.miniLeftEye);
+    const leftHand = new THREE.Mesh(handGeo, skinMaterial);
+    leftHand.position.y = -0.92;
+    this.leftArmGroup.add(leftHand);
 
-    this.miniRightEye = new THREE.Mesh(miniEyeGeo, faceDarkMaterial);
-    this.miniRightEye.position.set(0.16, 0.14, 0.44);
-    this.miniGhostGroup.add(this.miniRightEye);
+    // Right Arm
+    this.rightArmGroup = new THREE.Group();
+    this.rightArmGroup.position.set(0.82, -0.7, 0);
+    this.avatarGroup.add(this.rightArmGroup);
 
-    const miniMouthGeo = new THREE.TorusGeometry(0.08, 0.025, 12, 24, Math.PI);
-    this.miniMouth = new THREE.Mesh(miniMouthGeo, faceDarkMaterial);
-    this.miniMouth.rotation.x = Math.PI;
-    this.miniMouth.position.set(0, 0.04, 0.46);
-    this.miniGhostGroup.add(this.miniMouth);
+    const rightArmMesh = new THREE.Mesh(armGeo, jacketMaterial);
+    rightArmMesh.position.y = -0.42;
+    this.rightArmGroup.add(rightArmMesh);
 
+    const rightHand = new THREE.Mesh(handGeo, skinMaterial);
+    rightHand.position.y = -0.92;
+    this.rightArmGroup.add(rightHand);
 
-    // ================= 3. ANIMATED TEARDROPS (CRY MODE) =================
+    // 5. Teardrops (Cry Mode)
     const dropGeo = new THREE.ConeGeometry(0.06, 0.18, 12);
     for (let i = 0; i < 6; i++) {
       const drop = new THREE.Mesh(dropGeo, tearMaterial);
@@ -1375,11 +1412,11 @@ class AuthAvatar3DEngine {
     const statusText = document.getElementById("avatar-status-text");
     const hintText = document.getElementById("avatar-hint");
     if (cover) {
-      if (statusText) statusText.textContent = "No Peeking! 👻🙈";
-      if (hintText) hintText.textContent = "Password hidden from cute ghosts";
+      if (statusText) statusText.textContent = "No Peeking! 🙈";
+      if (hintText) hintText.textContent = "Password hidden from 3D man avatar";
     } else {
-      if (statusText) statusText.textContent = "Happy Ghosts... 👻";
-      if (hintText) hintText.textContent = "Type details, smile on login, cry on wrong pwd";
+      if (statusText) statusText.textContent = "Watching... 👁️";
+      if (hintText) hintText.textContent = "Smile on correct pwd, cry on wrong pwd";
     }
   }
 
@@ -1389,21 +1426,25 @@ class AuthAvatar3DEngine {
 
     const statusText = document.getElementById("avatar-status-text");
     const hintText = document.getElementById("avatar-hint");
-    if (statusText) statusText.textContent = "Wrong Password! Ghosts Crying 😭💔";
+    if (statusText) statusText.textContent = "Wrong Password! Crying 😭💔";
     if (hintText) hintText.textContent = "Oh no! Incorrect password entered";
 
     // Show crying mouth
-    this.mainMouthNormal.visible = false;
-    this.mainMouthSmile.visible = false;
-    this.mainMouthCry.visible = true;
+    this.mouthNormal.visible = false;
+    this.mouthSmile.visible = false;
+    this.mouthCry.visible = true;
+
+    // Tilt eyebrows down sad
+    this.leftBrow.rotation.z = -0.25;
+    this.rightBrow.rotation.z = 0.25;
 
     // Show animated teardrops
     this.teardrops.forEach((d, i) => {
       d.visible = true;
       d.position.set(
-        (i % 2 === 0 ? 0.16 : 0.64) + (Math.random() - 0.5) * 0.1,
+        (i % 2 === 0 ? -0.25 : 0.25) + (Math.random() - 0.5) * 0.1,
         0.1,
-        0.75
+        0.78
       );
     });
   }
@@ -1414,13 +1455,17 @@ class AuthAvatar3DEngine {
 
     const statusText = document.getElementById("avatar-status-text");
     const hintText = document.getElementById("avatar-hint");
-    if (statusText) statusText.textContent = "Yay! Login Success! 😊🎉";
-    if (hintText) hintText.textContent = "Welcome back! Ghosts are super happy";
+    if (statusText) statusText.textContent = "Correct Password! Happy Smile 😊🎉";
+    if (hintText) hintText.textContent = "Welcome back! Avatar is super happy";
 
     // Show big smile mouth
-    this.mainMouthNormal.visible = false;
-    this.mainMouthCry.visible = false;
-    this.mainMouthSmile.visible = true;
+    this.mouthNormal.visible = false;
+    this.mouthCry.visible = false;
+    this.mouthSmile.visible = true;
+
+    // Arch eyebrows up happy
+    this.leftBrow.rotation.z = 0.15;
+    this.rightBrow.rotation.z = -0.15;
 
     // Hide teardrops
     this.teardrops.forEach((d) => (d.visible = false));
@@ -1428,9 +1473,11 @@ class AuthAvatar3DEngine {
 
   resetState() {
     this.state = "normal";
-    this.mainMouthNormal.visible = true;
-    this.mainMouthSmile.visible = false;
-    this.mainMouthCry.visible = false;
+    this.mouthNormal.visible = true;
+    this.mouthSmile.visible = false;
+    this.mouthCry.visible = false;
+    this.leftBrow.rotation.z = 0.05;
+    this.rightBrow.rotation.z = -0.05;
     this.teardrops.forEach((d) => (d.visible = false));
   }
 
@@ -1443,17 +1490,14 @@ class AuthAvatar3DEngine {
     this.currentMouse.x += (this.targetMouse.x - this.currentMouse.x) * 0.08;
     this.currentMouse.y += (this.targetMouse.y - this.currentMouse.y) * 0.08;
 
-    // Floating bobbing motion
-    this.mainGhostGroup.position.y = -0.1 + Math.sin(time * 2.5) * 0.08;
-    this.miniGhostGroup.position.y = -0.35 + Math.sin(time * 2.8 + 1.0) * 0.06;
+    // Breathing float
+    this.avatarGroup.position.y = Math.sin(time * 2.2) * 0.06;
 
     if (this.state === "smile") {
       const elapsed = performance.now() - this.timer;
-      // Joyful victory bounce
-      this.mainGhostGroup.position.y = -0.1 + Math.abs(Math.sin(time * 8)) * 0.25;
-      this.miniGhostGroup.position.y = -0.35 + Math.abs(Math.cos(time * 8)) * 0.25;
-      this.mainGhostGroup.rotation.z = Math.sin(time * 6) * 0.15;
-      this.miniGhostGroup.rotation.z = -Math.sin(time * 6) * 0.15;
+      // Joyful victory nod bounce
+      this.headGroup.position.y = 0.25 + Math.abs(Math.sin(time * 8)) * 0.15;
+      this.headGroup.rotation.z = Math.sin(time * 6) * 0.12;
 
       if (elapsed > 2500) {
         this.resetState();
@@ -1462,12 +1506,11 @@ class AuthAvatar3DEngine {
       const elapsed = performance.now() - this.timer;
 
       // Shivering tremble animation
-      this.mainGhostGroup.rotation.z = Math.sin(elapsed * 0.04) * 0.12;
-      this.miniGhostGroup.rotation.z = -Math.sin(elapsed * 0.04) * 0.12;
-      this.mainGhostGroup.position.x = 0.4 + Math.sin(elapsed * 0.05) * 0.04;
+      this.headGroup.rotation.z = Math.sin(elapsed * 0.04) * 0.12;
+      this.headGroup.rotation.x = 0.15 + Math.sin(elapsed * 0.06) * 0.08;
 
       // Animate falling teardrops
-      this.teardrops.forEach((drop, idx) => {
+      this.teardrops.forEach((drop) => {
         drop.position.y -= 0.035;
         if (drop.position.y < -1.2) {
           drop.position.y = 0.1;
@@ -1478,24 +1521,26 @@ class AuthAvatar3DEngine {
         this.resetState();
       }
     } else if (this.state === "cover") {
-      // Cover eyes with arms
-      this.mainLeftArm.rotation.z += (Math.PI * 0.45 - this.mainLeftArm.rotation.z) * 0.15;
-      this.mainLeftArm.rotation.x += (0.6 - this.mainLeftArm.rotation.x) * 0.15;
+      // Cover eyes with hands
+      this.headGroup.rotation.x = 0.2;
+      this.headGroup.rotation.y = 0;
 
-      this.mainRightArm.rotation.z += (-Math.PI * 0.45 - this.mainRightArm.rotation.z) * 0.15;
-      this.mainRightArm.rotation.x += (0.6 - this.mainRightArm.rotation.x) * 0.15;
+      this.leftArmGroup.rotation.z += (Math.PI * 0.65 - this.leftArmGroup.rotation.z) * 0.15;
+      this.leftArmGroup.rotation.x += (0.6 - this.leftArmGroup.rotation.x) * 0.15;
+
+      this.rightArmGroup.rotation.z += (-Math.PI * 0.65 - this.rightArmGroup.rotation.z) * 0.15;
+      this.rightArmGroup.rotation.x += (0.6 - this.rightArmGroup.rotation.x) * 0.15;
     } else {
-      // Normal Head & Face tracking cursor
-      this.mainFaceGroup.rotation.y = this.currentMouse.x * 0.35;
-      this.mainFaceGroup.rotation.x = this.currentMouse.y * 0.25;
-
-      this.miniGhostGroup.rotation.y = this.currentMouse.x * 0.25;
+      // Normal Head tracking cursor
+      this.headGroup.rotation.y = this.currentMouse.x * 0.45;
+      this.headGroup.rotation.x = this.currentMouse.y * 0.35;
+      this.headGroup.position.y = 0.25;
 
       // Arms idle hanging
-      this.mainLeftArm.rotation.z += (0 - this.mainLeftArm.rotation.z) * 0.1;
-      this.mainLeftArm.rotation.x += (0 - this.mainLeftArm.rotation.x) * 0.1;
-      this.mainRightArm.rotation.z += (0 - this.mainRightArm.rotation.z) * 0.1;
-      this.mainRightArm.rotation.x += (0 - this.mainRightArm.rotation.x) * 0.1;
+      this.leftArmGroup.rotation.z += (0 - this.leftArmGroup.rotation.z) * 0.1;
+      this.leftArmGroup.rotation.x += (0 - this.leftArmGroup.rotation.x) * 0.1;
+      this.rightArmGroup.rotation.z += (0 - this.rightArmGroup.rotation.z) * 0.1;
+      this.rightArmGroup.rotation.x += (0 - this.rightArmGroup.rotation.x) * 0.1;
     }
 
     this.renderer.render(this.scene, this.camera);
