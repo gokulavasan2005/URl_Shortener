@@ -1285,27 +1285,73 @@ class AuthAvatar3DEngine {
     noseMesh.position.set(0, 0.02, 0.76);
     this.headGroup.add(noseMesh);
 
-    // Eyes
+    // ================= EYES & EXPRESSION GROUPS =================
+    // 1. Open Eyes Group
+    this.eyeOpenGroup = new THREE.Group();
+    this.headGroup.add(this.eyeOpenGroup);
+
     const eyeScleraGeo = new THREE.SphereGeometry(0.11, 16, 16);
     const eyePupilGeo = new THREE.SphereGeometry(0.065, 16, 16);
 
-    // Left Eye
     const leftSclera = new THREE.Mesh(eyeScleraGeo, eyeWhiteMaterial);
     leftSclera.position.set(-0.25, 0.15, 0.68);
-    this.headGroup.add(leftSclera);
+    this.eyeOpenGroup.add(leftSclera);
 
     this.leftPupil = new THREE.Mesh(eyePupilGeo, eyePupilMaterial);
     this.leftPupil.position.set(-0.25, 0.15, 0.76);
-    this.headGroup.add(this.leftPupil);
+    this.eyeOpenGroup.add(this.leftPupil);
 
-    // Right Eye
     const rightSclera = new THREE.Mesh(eyeScleraGeo, eyeWhiteMaterial);
     rightSclera.position.set(0.25, 0.15, 0.68);
-    this.headGroup.add(rightSclera);
+    this.eyeOpenGroup.add(rightSclera);
 
     this.rightPupil = new THREE.Mesh(eyePupilGeo, eyePupilMaterial);
     this.rightPupil.position.set(0.25, 0.15, 0.76);
-    this.headGroup.add(this.rightPupil);
+    this.eyeOpenGroup.add(this.rightPupil);
+
+    // 2. Closed / Covered Eyes Group (🙈 -  -)
+    this.eyeCoveredGroup = new THREE.Group();
+    this.eyeCoveredGroup.visible = false;
+    this.headGroup.add(this.eyeCoveredGroup);
+
+    const closedEyeGeo = new THREE.BoxGeometry(0.22, 0.04, 0.04);
+    const leftClosed = new THREE.Mesh(closedEyeGeo, eyePupilMaterial);
+    leftClosed.position.set(-0.25, 0.15, 0.74);
+    this.eyeCoveredGroup.add(leftClosed);
+
+    const rightClosed = new THREE.Mesh(closedEyeGeo, eyePupilMaterial);
+    rightClosed.position.set(0.25, 0.15, 0.74);
+    this.eyeCoveredGroup.add(rightClosed);
+
+    // 3. Happy Smile Eyes Group (^  ^)
+    this.eyeSmileGroup = new THREE.Group();
+    this.eyeSmileGroup.visible = false;
+    this.headGroup.add(this.eyeSmileGroup);
+
+    const smileArcGeo = new THREE.TorusGeometry(0.1, 0.03, 12, 24, Math.PI);
+    const leftSmileEye = new THREE.Mesh(smileArcGeo, eyePupilMaterial);
+    leftSmileEye.rotation.x = Math.PI;
+    leftSmileEye.position.set(-0.25, 0.15, 0.74);
+    this.eyeSmileGroup.add(leftSmileEye);
+
+    const rightSmileEye = new THREE.Mesh(smileArcGeo, eyePupilMaterial);
+    rightSmileEye.rotation.x = Math.PI;
+    rightSmileEye.position.set(0.25, 0.15, 0.74);
+    this.eyeSmileGroup.add(rightSmileEye);
+
+    // 4. Cry Sad Eyes Group (T  T)
+    this.eyeCryGroup = new THREE.Group();
+    this.eyeCryGroup.visible = false;
+    this.headGroup.add(this.eyeCryGroup);
+
+    const cryEyeGeo = new THREE.TorusGeometry(0.1, 0.03, 12, 24, Math.PI);
+    const leftCryEye = new THREE.Mesh(cryEyeGeo, eyePupilMaterial);
+    leftCryEye.position.set(-0.25, 0.18, 0.74);
+    this.eyeCryGroup.add(leftCryEye);
+
+    const rightCryEye = new THREE.Mesh(cryEyeGeo, eyePupilMaterial);
+    rightCryEye.position.set(0.25, 0.18, 0.74);
+    this.eyeCryGroup.add(rightCryEye);
 
     // Eyebrows
     const browGeo = new THREE.BoxGeometry(0.22, 0.04, 0.04);
@@ -1320,14 +1366,14 @@ class AuthAvatar3DEngine {
     this.headGroup.add(this.rightBrow);
 
     // Mouth Variants
-    // 1. Normal Mouth Arc
+    // Normal Mouth Arc
     const mouthNormalGeo = new THREE.TorusGeometry(0.12, 0.03, 12, 24, Math.PI);
     this.mouthNormal = new THREE.Mesh(mouthNormalGeo, eyePupilMaterial);
     this.mouthNormal.rotation.x = Math.PI;
     this.mouthNormal.position.set(0, -0.18, 0.72);
     this.headGroup.add(this.mouthNormal);
 
-    // 2. Happy Smile Mouth (Big Grin)
+    // Happy Smile Mouth (Big Grin)
     const mouthSmileGeo = new THREE.SphereGeometry(0.16, 16, 16);
     this.mouthSmile = new THREE.Mesh(mouthSmileGeo, eyePupilMaterial);
     this.mouthSmile.scale.set(1.2, 0.7, 0.3);
@@ -1335,16 +1381,16 @@ class AuthAvatar3DEngine {
     this.mouthSmile.visible = false;
     this.headGroup.add(this.mouthSmile);
 
-    // 3. Cry Sad Mouth (Wavy Inverted Arc)
+    // Cry Sad Mouth (Wavy Inverted Arc)
     const mouthCryGeo = new THREE.TorusGeometry(0.12, 0.03, 12, 24, Math.PI);
     this.mouthCry = new THREE.Mesh(mouthCryGeo, eyePupilMaterial);
     this.mouthCry.position.set(0, -0.24, 0.72);
     this.mouthCry.visible = false;
     this.headGroup.add(this.mouthCry);
 
-    // 4. Jointed Arms for Eye Covering Animation
+    // Jointed Arms & Hands
     const armGeo = new THREE.CylinderGeometry(0.14, 0.12, 0.95, 16);
-    const handGeo = new THREE.SphereGeometry(0.18, 14, 14);
+    const handGeo = new THREE.SphereGeometry(0.22, 16, 16);
 
     // Left Arm
     this.leftArmGroup = new THREE.Group();
@@ -1372,7 +1418,7 @@ class AuthAvatar3DEngine {
     rightHand.position.y = -0.92;
     this.rightArmGroup.add(rightHand);
 
-    // 5. Teardrops (Cry Mode)
+    // Teardrops (Cry Mode)
     const dropGeo = new THREE.ConeGeometry(0.06, 0.18, 12);
     for (let i = 0; i < 6; i++) {
       const drop = new THREE.Mesh(dropGeo, tearMaterial);
@@ -1438,7 +1484,12 @@ class AuthAvatar3DEngine {
     if (statusText) statusText.textContent = "Wrong Password! Crying 😭💔";
     if (hintText) hintText.textContent = "Oh no! Incorrect password entered";
 
-    // Show crying mouth
+    // Show crying eyes & mouth
+    this.eyeOpenGroup.visible = false;
+    this.eyeCoveredGroup.visible = false;
+    this.eyeSmileGroup.visible = false;
+    this.eyeCryGroup.visible = true;
+
     this.mouthNormal.visible = false;
     this.mouthSmile.visible = false;
     this.mouthCry.visible = true;
@@ -1467,7 +1518,12 @@ class AuthAvatar3DEngine {
     if (statusText) statusText.textContent = "Correct Password! Happy Smile 😊🎉";
     if (hintText) hintText.textContent = "Welcome back! Avatar is super happy";
 
-    // Show big smile mouth
+    // Show happy smile eyes & mouth
+    this.eyeOpenGroup.visible = false;
+    this.eyeCoveredGroup.visible = false;
+    this.eyeCryGroup.visible = false;
+    this.eyeSmileGroup.visible = true;
+
     this.mouthNormal.visible = false;
     this.mouthCry.visible = false;
     this.mouthSmile.visible = true;
@@ -1482,9 +1538,15 @@ class AuthAvatar3DEngine {
 
   resetState() {
     this.state = "normal";
+    this.eyeOpenGroup.visible = true;
+    this.eyeCoveredGroup.visible = false;
+    this.eyeSmileGroup.visible = false;
+    this.eyeCryGroup.visible = false;
+
     this.mouthNormal.visible = true;
     this.mouthSmile.visible = false;
     this.mouthCry.visible = false;
+
     this.leftBrow.rotation.z = 0.05;
     this.rightBrow.rotation.z = -0.05;
     this.teardrops.forEach((d) => (d.visible = false));
@@ -1530,26 +1592,51 @@ class AuthAvatar3DEngine {
         this.resetState();
       }
     } else if (this.state === "cover") {
-      // Cover eyes with hands
-      this.headGroup.rotation.x = 0.2;
+      // Show closed eye lines & move hands directly over eyes!
+      this.eyeOpenGroup.visible = false;
+      this.eyeCoveredGroup.visible = true;
+      this.eyeSmileGroup.visible = false;
+      this.eyeCryGroup.visible = false;
+
+      this.headGroup.rotation.x = 0.18;
       this.headGroup.rotation.y = 0;
 
-      this.leftArmGroup.rotation.z += (Math.PI * 0.65 - this.leftArmGroup.rotation.z) * 0.15;
-      this.leftArmGroup.rotation.x += (0.6 - this.leftArmGroup.rotation.x) * 0.15;
+      // Position arms & hands directly covering eyes
+      this.leftArmGroup.position.x += (-0.45 - this.leftArmGroup.position.x) * 0.2;
+      this.leftArmGroup.position.y += (-0.1 - this.leftArmGroup.position.y) * 0.2;
+      this.leftArmGroup.position.z += (0.45 - this.leftArmGroup.position.z) * 0.2;
+      this.leftArmGroup.rotation.z += (Math.PI * 0.7 - this.leftArmGroup.rotation.z) * 0.2;
+      this.leftArmGroup.rotation.x += (1.1 - this.leftArmGroup.rotation.x) * 0.2;
 
-      this.rightArmGroup.rotation.z += (-Math.PI * 0.65 - this.rightArmGroup.rotation.z) * 0.15;
-      this.rightArmGroup.rotation.x += (0.6 - this.rightArmGroup.rotation.x) * 0.15;
+      this.rightArmGroup.position.x += (0.45 - this.rightArmGroup.position.x) * 0.2;
+      this.rightArmGroup.position.y += (-0.1 - this.rightArmGroup.position.y) * 0.2;
+      this.rightArmGroup.position.z += (0.45 - this.rightArmGroup.position.z) * 0.2;
+      this.rightArmGroup.rotation.z += (-Math.PI * 0.7 - this.rightArmGroup.rotation.z) * 0.2;
+      this.rightArmGroup.rotation.x += (1.1 - this.rightArmGroup.rotation.x) * 0.2;
+
     } else {
-      // Normal Head tracking cursor
+      // Normal state: open eyes & tracking cursor
+      this.eyeOpenGroup.visible = true;
+      this.eyeCoveredGroup.visible = false;
+      this.eyeSmileGroup.visible = false;
+      this.eyeCryGroup.visible = false;
+
       this.headGroup.rotation.y = this.currentMouse.x * 0.45;
       this.headGroup.rotation.x = this.currentMouse.y * 0.35;
       this.headGroup.position.y = 0.25;
 
-      // Arms idle hanging
-      this.leftArmGroup.rotation.z += (0 - this.leftArmGroup.rotation.z) * 0.1;
-      this.leftArmGroup.rotation.x += (0 - this.leftArmGroup.rotation.x) * 0.1;
-      this.rightArmGroup.rotation.z += (0 - this.rightArmGroup.rotation.z) * 0.1;
-      this.rightArmGroup.rotation.x += (0 - this.rightArmGroup.rotation.x) * 0.1;
+      // Return arms to idle
+      this.leftArmGroup.position.x += (-0.82 - this.leftArmGroup.position.x) * 0.15;
+      this.leftArmGroup.position.y += (-0.7 - this.leftArmGroup.position.y) * 0.15;
+      this.leftArmGroup.position.z += (0 - this.leftArmGroup.position.z) * 0.15;
+      this.leftArmGroup.rotation.z += (0 - this.leftArmGroup.rotation.z) * 0.15;
+      this.leftArmGroup.rotation.x += (0 - this.leftArmGroup.rotation.x) * 0.15;
+
+      this.rightArmGroup.position.x += (0.82 - this.rightArmGroup.position.x) * 0.15;
+      this.rightArmGroup.position.y += (-0.7 - this.rightArmGroup.position.y) * 0.15;
+      this.rightArmGroup.position.z += (0 - this.rightArmGroup.position.z) * 0.15;
+      this.rightArmGroup.rotation.z += (0 - this.rightArmGroup.rotation.z) * 0.15;
+      this.rightArmGroup.rotation.x += (0 - this.rightArmGroup.rotation.x) * 0.15;
     }
 
     this.renderer.render(this.scene, this.camera);
@@ -1657,7 +1744,7 @@ function initAuthSystem() {
         const res = await fetch(API.login, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ login_id: loginId, password: pwd }),
+          body: JSON.stringify({ login: loginId, login_id: loginId, password: pwd }),
         });
         const data = await res.json();
 

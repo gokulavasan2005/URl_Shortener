@@ -160,7 +160,7 @@ def register():
 @app.route("/api/login", methods=["POST"])
 def login():
     data = request.get_json(silent=True) or {}
-    login_id = (data.get("login") or "").strip()  # email or username
+    login_id = (data.get("login") or data.get("login_id") or "").strip()  # email or username
     password = data.get("password") or ""
 
     if not login_id or not password:
