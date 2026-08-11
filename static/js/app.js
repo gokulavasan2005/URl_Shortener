@@ -154,6 +154,11 @@ shortenForm.addEventListener("submit", async (e) => {
     showResult(data);
     showToast("✅ Short link created!", "success");
 
+    // Trigger 3D Hologram Burst Effect
+    if (window.hologramEngine) {
+      window.hologramEngine.burst();
+    }
+
     // Reset form (keep URL, clear alias + expiry)
     inputAlias.value  = "";
     inputExpiry.value = "";
@@ -760,13 +765,18 @@ window.deleteUrl       = deleteUrl;
   now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
   inputExpiry.min = now.toISOString().slice(0, 16);
   init3DTilt();
+
+  // Initialize 3D Hologram Engine
+  if (typeof THREE !== "undefined") {
+    window.hologramEngine = new HologramEngine("hologram-canvas");
+  }
 })();
 
 /* =========================================================
    Interactive 3D Tilt FX
    ========================================================= */
 function init3DTilt() {
-  document.querySelectorAll(".tilt-card, .hero-3d-wrapper").forEach((card) => {
+  document.querySelectorAll(".tilt-card, .hero-3d-wrapper, .hologram-stage-wrapper").forEach((card) => {
     card.addEventListener("mousemove", (e) => {
       const rect = card.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -775,7 +785,7 @@ function init3DTilt() {
       const centerY = rect.height / 2;
       const rotateX = ((y - centerY) / centerY) * -10;
       const rotateY = ((x - centerX) / centerX) * 10;
-      card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+      card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.01)`;
     });
 
     card.addEventListener("mouseleave", () => {
@@ -783,3 +793,286 @@ function init3DTilt() {
     });
   });
 }
+
+/* =========================================================
+   Three.js Interactive 3D Hologram Engine
+   ========================================================= */
+class HologramEngine {
+  constructor(canvasId) {
+    this.canvas = document.getElementById(canvasId);
+    if (!this.canvas || typeof THREE === "undefined") return;
+
+    this.scene = null;
+    this.camera = null;
+    this.renderer = null;
+
+    this.holoGroup = null;
+    this.outerMesh = null;
+    this.innerMesh = null;
+    this.ringsGroup = null;
+    this.particlesMesh = null;
+    this.laserDisc = null;
+
+    this.currentMode = "sphere";
+    this.targetRotationX = 0;
+    this.targetRotationY = 0;
+    this.currentRotationX = 0;
+    this.currentRotationY = 0;
+
+    this.burstEnergy = 0;
+    this.frameCount = 0;
+    this.lastFpsCheck = performance.now();
+    this.fps = 60;
+
+    this.initScene();
+    this.buildHologram("sphere");
+    this.setupEvents();
+    this.animate();
+  }
+
+  initScene() {
+    const wrapper = this.canvas.parentElement;
+    const width = wrapper.clientWidth || 440;
+    const height = wrapper.clientHeight || 380;
+
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    this.camera.position.set(0, 0, 7);
+
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: this.canvas,
+      alpha: true,
+      antialias: true,
+      powerPreference: "high-performance",
+    });
+    this.renderer.setSize(width, height);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    const ambientLight = new THREE.AmbientLight(0x06b6d4, 0.9);
+    this.scene.add(ambientLight);
+
+    const pointLight = new THREE.PointLight(0x7c3aed, 2.5, 50);
+    pointLight.position.set(2, 4, 5);
+    this.scene.add(pointLight);
+
+    const pointLight2 = new THREE.PointLight(0x06b6d4, 2.0, 50);
+    pointLight2.position.set(-3, -2, 4);
+    this.scene.add(pointLight2);
+  }
+
+  buildHologram(mode = "sphere") {
+    if (this.holoGroup) {
+      this.scene.remove(this.holoGroup);
+    }
+
+    this.currentMode = mode;
+    this.holoGroup = new THREE.Group();
+
+    // 1. Outer Wireframe Geometry
+    let outerGeo;
+    if (mode === "sphere") {
+      outerGeo = new THREE.IcosahedronGeometry(1.75, 2);
+    } else if (mode === "ring") {
+      outerGeo = new THREE.TorusGeometry(1.5, 0.45, 16, 100);
+    } else {
+      outerGeo = new THREE.BoxGeometry(2.3, 2.3, 2.3);
+    }
+
+    const outerMat = new THREE.MeshStandardMaterial({
+      color: 0x06b6d4,
+      wireframe: true,
+      emissive: 0x06b6d4,
+      emissiveIntensity: 0.6,
+      transparent: true,
+      opacity: 0.8,
+      roughness: 0.2,
+    });
+    this.outerMesh = new THREE.Mesh(outerGeo, outerMat);
+    this.holoGroup.add(this.outerMesh);
+
+    // 2. Inner Core Geometry
+    const innerGeo = new THREE.OctahedronGeometry(0.85, 0);
+    const innerMat = new THREE.MeshStandardMaterial({
+      color: 0x7c3aed,
+      wireframe: true,
+      emissive: 0xff00c8,
+      emissiveIntensity: 0.9,
+      transparent: true,
+      opacity: 0.9,
+    });
+    this.innerMesh = new THREE.Mesh(innerGeo, innerMat);
+    this.holoGroup.add(this.innerMesh);
+
+    // 3. Orbiting Data Rings
+    this.ringsGroup = new THREE.Group();
+    const ringGeo = new THREE.TorusGeometry(2.2, 0.025, 16, 100);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.8,
+    });
+    const ring1 = new THREE.Mesh(ringGeo, ringMat);
+    ring1.rotation.x = Math.PI / 3;
+    const ring2 = new THREE.Mesh(ringGeo, ringMat);
+    ring2.rotation.y = Math.PI / 4;
+    this.ringsGroup.add(ring1, ring2);
+    this.holoGroup.add(this.ringsGroup);
+
+    // 4. Rising Holographic Data Stream Particles
+    const particleCount = 400;
+    const pGeo = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount * 3; i += 3) {
+      positions[i] = (Math.random() - 0.5) * 5;
+      positions[i + 1] = (Math.random() - 0.5) * 5;
+      positions[i + 2] = (Math.random() - 0.5) * 5;
+    }
+    pGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const pMat = new THREE.PointsMaterial({
+      color: 0x06b6d4,
+      size: 0.045,
+      transparent: true,
+      opacity: 0.85,
+    });
+    this.particlesMesh = new THREE.Points(pGeo, pMat);
+    this.holoGroup.add(this.particlesMesh);
+
+    // 5. Vertical Laser Scan Plane
+    const laserGeo = new THREE.RingGeometry(0.1, 2.4, 32);
+    const laserMat = new THREE.MeshBasicMaterial({
+      color: 0x06b6d4,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.3,
+    });
+    this.laserDisc = new THREE.Mesh(laserGeo, laserMat);
+    this.laserDisc.rotation.x = Math.PI / 2;
+    this.holoGroup.add(this.laserDisc);
+
+    this.scene.add(this.holoGroup);
+  }
+
+  setupEvents() {
+    const wrapper = this.canvas.parentElement;
+
+    wrapper.addEventListener("mousemove", (e) => {
+      const rect = wrapper.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      this.targetRotationY = x * 1.5;
+      this.targetRotationX = y * 1.5;
+    });
+
+    wrapper.addEventListener("mouseleave", () => {
+      this.targetRotationX = 0;
+      this.targetRotationY = 0;
+    });
+
+    window.addEventListener("resize", () => {
+      if (!wrapper) return;
+      const width = wrapper.clientWidth;
+      const height = wrapper.clientHeight;
+      this.camera.aspect = width / height;
+      this.camera.updateProjectionMatrix();
+      this.renderer.setSize(width, height);
+    });
+
+    // Control buttons
+    const btnSphere = document.getElementById("holo-mode-sphere");
+    const btnRing = document.getElementById("holo-mode-ring");
+    const btnMatrix = document.getElementById("holo-mode-matrix");
+
+    const setModeBtn = (activeBtn) => {
+      [btnSphere, btnRing, btnMatrix].forEach((b) => b?.classList.remove("active"));
+      activeBtn?.classList.add("active");
+    };
+
+    btnSphere?.addEventListener("click", () => {
+      setModeBtn(btnSphere);
+      this.buildHologram("sphere");
+    });
+    btnRing?.addEventListener("click", () => {
+      setModeBtn(btnRing);
+      this.buildHologram("ring");
+    });
+    btnMatrix?.addEventListener("click", () => {
+      setModeBtn(btnMatrix);
+      this.buildHologram("matrix");
+    });
+  }
+
+  burst() {
+    this.burstEnergy = 1.0;
+    const statusEl = document.getElementById("holo-status");
+    if (statusEl) {
+      statusEl.textContent = "⚡ 3D HOLOGRAPHIC LINK MATRIX GENERATED!";
+      statusEl.style.color = "#06b6d4";
+      setTimeout(() => {
+        statusEl.textContent = "Drag cursor to rotate 3D view";
+        statusEl.style.color = "rgba(255,255,255,0.4)";
+      }, 4000);
+    }
+  }
+
+  animate() {
+    requestAnimationFrame(() => this.animate());
+
+    if (!this.holoGroup) return;
+
+    // Smooth lerp rotation from mouse tracking
+    this.currentRotationX += (this.targetRotationX - this.currentRotationX) * 0.05;
+    this.currentRotationY += (this.targetRotationY - this.currentRotationY) * 0.05;
+
+    const speed = 0.008 + this.burstEnergy * 0.05;
+    this.holoGroup.rotation.y += speed;
+    if (this.outerMesh) this.outerMesh.rotation.x += speed * 0.5;
+    if (this.innerMesh) {
+      this.innerMesh.rotation.y -= speed * 1.5;
+      this.innerMesh.rotation.z += speed * 0.8;
+    }
+    if (this.ringsGroup) {
+      this.ringsGroup.rotation.z += speed * 0.4;
+    }
+
+    this.holoGroup.rotation.x = this.currentRotationX;
+    this.holoGroup.rotation.y += this.currentRotationY * 0.05;
+
+    // Laser Disc scan plane
+    const time = performance.now() * 0.002;
+    if (this.laserDisc) {
+      this.laserDisc.position.y = Math.sin(time * 2) * 1.5;
+    }
+
+    // Particle field motion
+    if (this.particlesMesh) {
+      const positions = this.particlesMesh.geometry.attributes.position.array;
+      for (let i = 1; i < positions.length; i += 3) {
+        positions[i] += 0.015 + this.burstEnergy * 0.03;
+        if (positions[i] > 2.5) positions[i] = -2.5;
+      }
+      this.particlesMesh.geometry.attributes.position.needsUpdate = true;
+    }
+
+    // Burst energy decay
+    if (this.burstEnergy > 0) {
+      this.burstEnergy *= 0.95;
+      if (this.outerMesh) {
+        this.outerMesh.material.emissiveIntensity = 0.6 + this.burstEnergy * 2.5;
+      }
+    }
+
+    // FPS counter
+    this.frameCount++;
+    const now = performance.now();
+    if (now - this.lastFpsCheck >= 1000) {
+      this.fps = this.frameCount;
+      this.frameCount = 0;
+      this.lastFpsCheck = now;
+      const fpsEl = document.getElementById("holo-fps");
+      if (fpsEl) fpsEl.textContent = `${this.fps} FPS`;
+    }
+
+    this.renderer.render(this.scene, this.camera);
+  }
+}
+

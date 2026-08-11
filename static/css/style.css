@@ -292,45 +292,232 @@ img { max-width: 100%; display: block; }
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
 }
 
-.hero-3d-wrapper {
+/* ---------- 3D WebGL Hologram Stage ---------- */
+.hologram-stage-wrapper {
   position: relative;
   width: 100%;
-  max-width: 460px;
+  max-width: 480px;
+  height: 400px;
   border-radius: var(--radius-xl);
   overflow: hidden;
-  padding: 8px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-  border: 1px solid var(--border-accent);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 40px rgba(124, 58, 237, 0.25);
+  background: rgba(10, 10, 22, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.8),
+    0 0 35px rgba(6, 182, 212, 0.25),
+    inset 0 0 25px rgba(124, 58, 237, 0.2);
+  transition: transform 0.4s cubic-bezier(0.1, 0.8, 0.2, 1), box-shadow 0.4s ease;
   animation: hero3dFloat 6s ease-in-out infinite;
 }
 
-.hero-3d-glow {
+.hologram-stage-wrapper:hover {
+  box-shadow: 
+    0 25px 60px rgba(0, 0, 0, 0.9),
+    0 0 50px rgba(6, 182, 212, 0.4),
+    inset 0 0 35px rgba(124, 58, 237, 0.35);
+}
+
+#hologram-canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  cursor: grab;
+}
+
+#hologram-canvas:active {
+  cursor: grabbing;
+}
+
+/* Holographic Projector Emitter Base */
+.holo-projector-base {
   position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 50% 50%, rgba(124,58,237,0.3), transparent 70%);
-  filter: blur(40px);
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70%;
+  height: 40px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.holo-emitter-ring {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 180px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(6, 182, 212, 0.8) 0%, rgba(124, 58, 237, 0.5) 40%, transparent 70%);
+  box-shadow: 0 0 25px #06b6d4, 0 0 50px #7c3aed;
+  animation: emitterPulse 2.5s ease-in-out infinite alternate;
+}
+
+.holo-laser-beam {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 160px;
+  height: 140px;
+  background: linear-gradient(to top, rgba(6, 182, 212, 0.35) 0%, rgba(124, 58, 237, 0.05) 70%, transparent 100%);
+  clip-path: polygon(25% 100%, 75% 100%, 100% 0%, 0% 0%);
+  opacity: 0.7;
   pointer-events: none;
 }
 
-.hero-3d-img {
-  width: 100%;
-  height: auto;
-  display: block;
-  border-radius: calc(var(--radius-xl) - 6px);
-  object-fit: cover;
-  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+@keyframes emitterPulse {
+  0%   { opacity: 0.6; transform: translateX(-50%) scale(0.95); }
+  100% { opacity: 1; transform: translateX(-50%) scale(1.05); }
 }
 
-.hero-3d-wrapper:hover .hero-3d-img {
-  transform: scale(1.03) rotate(0.5deg);
+/* Hologram HUD Overlay */
+.hologram-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1rem;
+  z-index: 3;
+}
+
+.hud-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hud-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #06b6d4;
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.hud-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #06b6d4;
+  box-shadow: 0 0 8px #06b6d4;
+}
+
+.hud-dot.pulsing {
+  animation: dotPulse 1.2s infinite;
+}
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.3); }
+}
+
+.hud-fps {
+  font-size: 0.68rem;
+  font-family: monospace;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.hud-controls {
+  pointer-events: auto;
+  align-self: center;
+  display: flex;
+  gap: 0.4rem;
+  background: rgba(7, 7, 14, 0.65);
+  backdrop-filter: blur(10px);
+  padding: 0.3rem 0.4rem;
+  border-radius: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transform: translateY(60px);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  opacity: 0.85;
+}
+
+.hologram-stage-wrapper:hover .hud-controls {
+  transform: translateY(0px);
+  opacity: 1;
+}
+
+.hud-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.3rem 0.75rem;
+  border-radius: 100px;
+  transition: all 0.2s ease;
+}
+
+.hud-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.hud-btn.active {
+  background: linear-gradient(135deg, #06b6d4 0%, #7c3aed 100%);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.5);
+}
+
+.hud-bottom {
+  text-align: center;
+}
+
+.hud-status {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+  letter-spacing: 0.02em;
+}
+
+/* Hologram Nav Badge */
+.holo-badge-nav {
+  font-size: 0.65rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #06b6d4, #7c3aed);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  vertical-align: middle;
+  margin-left: 0.4rem;
+}
+
+/* Background Scanlines Effect */
+.bg-scanline {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(6, 182, 212, 0.015) 3px,
+    rgba(0, 0, 0, 0) 4px
+  );
+  opacity: 0.6;
 }
 
 @keyframes hero3dFloat {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50%      { transform: translateY(-12px) rotate(0.8deg); }
+  50%      { transform: translateY(-10px) rotate(0.5deg); }
 }
 
 /* Responsive Hero Grid */

@@ -18,15 +18,17 @@
   <!-- Favicon (emoji) -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
 
+  <!-- Three.js (3D WebGL Hologram Engine) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
   <!-- Stylesheet -->
   <link rel="stylesheet" href="/static/css/style.css" />
-
-  <!-- Chart.js (loaded before closing body, defer would break canvas) -->
 </head>
 <body>
 
   <!-- Animated Background -->
   <div class="bg-grid" aria-hidden="true"></div>
+  <div class="bg-scanline" aria-hidden="true"></div>
   <div class="bg-orbs" aria-hidden="true">
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
@@ -39,8 +41,8 @@
     <nav class="navbar" role="navigation" aria-label="Main Navigation">
       <div class="container">
         <div class="navbar-brand" aria-label="Gokul URL Shortener Home">
-          <span class="brand-icon" aria-hidden="true">⚡</span>
-          Gokul URL Shortener
+          <span class="brand-icon" aria-hidden="true">💎</span>
+          Gokul URL Shortener <span class="holo-badge-nav">3D HOLO v2.5</span>
         </div>
         <div class="navbar-nav">
           <button class="nav-btn active" id="nav-shorten" aria-current="page">
@@ -76,14 +78,14 @@
             <!-- Left Hero Content -->
             <div class="hero-left">
               <div class="hero-badge">
-                <span class="badge-icon">⚡</span> 3D-Powered Enterprise URL Engine
+                <span class="badge-icon">🔮</span> 3D Holographic Link Matrix
               </div>
               <h1 class="hero-title">
                 Shorten, Track &amp;<br />
-                <span class="gradient-text">Supercharge Links</span>
+                <span class="gradient-text">Project 3D Holograms</span>
               </h1>
               <p class="hero-sub">
-                Transform long, cluttered URLs into sleek branded short links. Track detailed click metrics, generate custom 3D QR codes, and set automated link expirations.
+                Transform cluttered web addresses into interactive branded short links. Track real-time engagement with interactive WebGL 3D Holograms, vector QR codes, and smart expirations.
               </p>
 
               <!-- Stats Bar -->
@@ -103,11 +105,35 @@
               </div>
             </div>
 
-            <!-- Right 3D Visual Asset -->
+            <!-- Right 3D Interactive WebGL Hologram Viewport -->
             <div class="hero-right">
-              <div class="hero-3d-wrapper">
-                <div class="hero-3d-glow"></div>
-                <img src="/static/images/hero_3d.png" alt="Futuristic 3D URL Shortener Artwork" class="hero-3d-img" />
+              <div class="hologram-stage-wrapper tilt-card" id="hologram-stage">
+                <!-- Glowing holographic laser beam base -->
+                <div class="holo-projector-base">
+                  <div class="holo-emitter-ring"></div>
+                  <div class="holo-laser-beam"></div>
+                </div>
+
+                <!-- WebGL 3D Canvas -->
+                <canvas id="hologram-canvas"></canvas>
+
+                <!-- Hologram HUD Overlay -->
+                <div class="hologram-hud">
+                  <div class="hud-top">
+                    <span class="hud-tag"><span class="hud-dot pulsing"></span> 3D HOLOGRAM ONLINE</span>
+                    <span class="hud-fps" id="holo-fps">60 FPS</span>
+                  </div>
+                  
+                  <div class="hud-controls">
+                    <button class="hud-btn active" id="holo-mode-sphere" title="Cyber Sphere Geometry">🌐 Sphere</button>
+                    <button class="hud-btn" id="holo-mode-ring" title="Quantum Ring Geometry">⭕ Quantum</button>
+                    <button class="hud-btn" id="holo-mode-matrix" title="Data Matrix Cube">🧊 Matrix</button>
+                  </div>
+
+                  <div class="hud-bottom">
+                    <span class="hud-status" id="holo-status">Drag cursor to rotate 3D view</span>
+                  </div>
+                </div>
               </div>
             </div>
 
