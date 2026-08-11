@@ -1134,7 +1134,7 @@ if (document.readyState === "loading") {
 }
 
 /* =========================================================
-   3D AUTH AVATAR ENGINE (Three.js WebGL)
+   SPOOKY GHOST 3D AVATAR ENGINE (Three.js WebGL)
    ========================================================= */
 class AuthAvatar3DEngine {
   constructor(canvasId) {
@@ -1148,14 +1148,12 @@ class AuthAvatar3DEngine {
     this.targetMouse = { x: 0, y: 0 };
     this.currentMouse = { x: 0, y: 0 };
 
-    this.isCoveringEyes = false;
-    this.isShakingError = false;
-    this.isSpinningSuccess = false;
-    this.errorTimer = 0;
-    this.spinTimer = 0;
+    this.state = "normal"; // "normal" | "cover" | "smile" | "cry"
+    this.timer = 0;
+    this.teardrops = [];
 
     this.initScene();
-    this.createAvatar();
+    this.createGhostAvatars();
     this.bindEvents();
     this.animate();
   }
@@ -1164,7 +1162,7 @@ class AuthAvatar3DEngine {
     this.scene = new THREE.Scene();
 
     this.camera = new THREE.PerspectiveCamera(45, this.width / this.height, 0.1, 100);
-    this.camera.position.set(0, 0.3, 5.0);
+    this.camera.position.set(0, 0.1, 4.8);
 
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
@@ -1175,132 +1173,177 @@ class AuthAvatar3DEngine {
     this.renderer.setSize(this.width, this.height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // Lights
-    const ambientLight = new THREE.AmbientLight(0x505070, 1.8);
+    // Soft Spooky Glow Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.8);
     this.scene.add(ambientLight);
 
-    const cyanPointLight = new THREE.PointLight(0x00f3ff, 2.8, 12);
-    cyanPointLight.position.set(-2.5, 2.5, 3.5);
-    this.scene.add(cyanPointLight);
+    const purpleLight = new THREE.PointLight(0xa855f7, 2.5, 10);
+    purpleLight.position.set(-2.5, 3, 3);
+    this.scene.add(purpleLight);
 
-    const purplePointLight = new THREE.PointLight(0x7c3aed, 2.2, 10);
-    purplePointLight.position.set(2.5, -1.5, 3.5);
-    this.scene.add(purplePointLight);
-
-    const rimLight = new THREE.DirectionalLight(0xffffff, 1.4);
-    rimLight.position.set(0, 4, -3);
-    this.scene.add(rimLight);
+    const cyanLight = new THREE.PointLight(0x06b6d4, 2.0, 10);
+    cyanLight.position.set(2.5, -2, 3);
+    this.scene.add(cyanLight);
   }
 
-  createAvatar() {
-    this.avatarGroup = new THREE.Group();
-    this.scene.add(this.avatarGroup);
+  createGhostAvatars() {
+    this.ghostsGroup = new THREE.Group();
+    this.scene.add(this.ghostsGroup);
 
-    // Materials
-    const darkMetalMaterial = new THREE.MeshStandardMaterial({
-      color: 0x161625,
-      roughness: 0.25,
-      metalness: 0.85,
-    });
-
-    const bodyArmorMaterial = new THREE.MeshStandardMaterial({
-      color: 0x0f0f1a,
-      roughness: 0.35,
-      metalness: 0.75,
-    });
-
-    this.cyanNeonMaterial = new THREE.MeshStandardMaterial({
-      color: 0x00f3ff,
-      emissive: 0x00f3ff,
-      emissiveIntensity: 0.95,
-      roughness: 0.2,
-    });
-
-    const eyeMaterial = new THREE.MeshStandardMaterial({
+    // Soft Ghost Material
+    this.ghostMaterial = new THREE.MeshStandardMaterial({
       color: 0xffffff,
-      emissive: 0x00f3ff,
-      emissiveIntensity: 1.3,
+      emissive: 0xf0fdfa,
+      emissiveIntensity: 0.8,
+      roughness: 0.1,
+      metalness: 0.1,
+      transparent: true,
+      opacity: 0.96,
     });
 
-    // 1. Torso & Armor
-    const torsoGeo = new THREE.CylinderGeometry(0.62, 0.45, 1.25, 16);
-    this.torso = new THREE.Mesh(torsoGeo, bodyArmorMaterial);
-    this.torso.position.y = -1.15;
-    this.avatarGroup.add(this.torso);
+    const blushMaterial = new THREE.MeshStandardMaterial({
+      color: 0xff7aa2,
+      emissive: 0xff7aa2,
+      emissiveIntensity: 0.9,
+    });
 
-    // Chest Emblem Core
-    const emblemGeo = new THREE.OctahedronGeometry(0.18, 0);
-    this.emblem = new THREE.Mesh(emblemGeo, this.cyanNeonMaterial);
-    this.emblem.position.set(0, -0.85, 0.48);
-    this.avatarGroup.add(this.emblem);
+    const faceDarkMaterial = new THREE.MeshBasicMaterial({ color: 0x181825 });
+    const tearMaterial = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      emissive: 0x0284c7,
+      emissiveIntensity: 0.9,
+      roughness: 0.1,
+    });
 
-    // 2. Head Assembly
-    this.headGroup = new THREE.Group();
-    this.headGroup.position.y = 0.25;
-    this.avatarGroup.add(this.headGroup);
+    // ================= 1. MAIN GHOST =================
+    this.mainGhostGroup = new THREE.Group();
+    this.mainGhostGroup.position.set(0.4, -0.1, 0);
+    this.ghostsGroup.add(this.mainGhostGroup);
 
-    // Stylized Head
-    const headGeo = new THREE.BoxGeometry(1.25, 1.15, 1.15);
-    this.headMesh = new THREE.Mesh(headGeo, darkMetalMaterial);
-    this.headGroup.add(this.headMesh);
+    // Body Capsule (Head + Torso)
+    const headGeo = new THREE.SphereGeometry(0.75, 32, 32);
+    const headMesh = new THREE.Mesh(headGeo, this.ghostMaterial);
+    this.mainGhostGroup.add(headMesh);
 
-    // Visor Shield
-    const visorGeo = new THREE.BoxGeometry(1.1, 0.4, 0.16);
-    this.visorMesh = new THREE.Mesh(visorGeo, this.cyanNeonMaterial);
-    this.visorMesh.position.set(0, 0.1, 0.54);
-    this.headGroup.add(this.visorMesh);
+    const bodyGeo = new THREE.CylinderGeometry(0.75, 0.9, 0.9, 32);
+    const bodyMesh = new THREE.Mesh(bodyGeo, this.ghostMaterial);
+    bodyMesh.position.y = -0.45;
+    this.mainGhostGroup.add(bodyMesh);
 
-    // Glowing Eyes
-    const eyeGeo = new THREE.SphereGeometry(0.085, 12, 12);
-    this.leftEye = new THREE.Mesh(eyeGeo, eyeMaterial);
-    this.leftEye.position.set(-0.26, 0.1, 0.62);
-    this.headGroup.add(this.leftEye);
+    // Wavy Skirt Bottom
+    const skirtGeo = new THREE.ConeGeometry(1.0, 0.5, 32);
+    const skirtMesh = new THREE.Mesh(skirtGeo, this.ghostMaterial);
+    skirtMesh.rotation.x = Math.PI;
+    skirtMesh.position.y = -0.95;
+    this.mainGhostGroup.add(skirtMesh);
 
-    this.rightEye = new THREE.Mesh(eyeGeo, eyeMaterial);
-    this.rightEye.position.set(0.26, 0.1, 0.62);
-    this.headGroup.add(this.rightEye);
+    // Blush Cheeks
+    const cheekGeo = new THREE.SphereGeometry(0.1, 12, 12);
+    const leftCheek = new THREE.Mesh(cheekGeo, blushMaterial);
+    leftCheek.position.set(-0.4, 0.05, 0.65);
+    this.mainGhostGroup.add(leftCheek);
 
-    // Floating Ears/Antennas
-    const earGeo = new THREE.TorusGeometry(0.24, 0.05, 12, 24);
-    const leftEar = new THREE.Mesh(earGeo, this.cyanNeonMaterial);
-    leftEar.rotation.y = Math.PI / 2;
-    leftEar.position.set(-0.68, 0.1, 0);
-    this.headGroup.add(leftEar);
+    const rightCheek = new THREE.Mesh(cheekGeo, blushMaterial);
+    rightCheek.position.set(0.4, 0.05, 0.65);
+    this.mainGhostGroup.add(rightCheek);
 
-    const rightEar = new THREE.Mesh(earGeo, this.cyanNeonMaterial);
-    rightEar.rotation.y = Math.PI / 2;
-    rightEar.position.set(0.68, 0.1, 0);
-    this.headGroup.add(rightEar);
+    // Main Ghost Face Features Group
+    this.mainFaceGroup = new THREE.Group();
+    this.mainGhostGroup.add(this.mainFaceGroup);
 
-    // 3. Arms & Hands for Eye-Covering
-    const armGeo = new THREE.CylinderGeometry(0.12, 0.1, 0.9, 12);
-    const handGeo = new THREE.SphereGeometry(0.2, 14, 14);
+    // Eyes
+    const eyeGeo = new THREE.SphereGeometry(0.09, 16, 16);
+    this.mainLeftEye = new THREE.Mesh(eyeGeo, faceDarkMaterial);
+    this.mainLeftEye.position.set(-0.24, 0.22, 0.7);
+    this.mainFaceGroup.add(this.mainLeftEye);
 
-    // Left Arm Group
-    this.leftArmGroup = new THREE.Group();
-    this.leftArmGroup.position.set(-0.75, -0.6, 0);
-    this.avatarGroup.add(this.leftArmGroup);
+    this.mainRightEye = new THREE.Mesh(eyeGeo, faceDarkMaterial);
+    this.mainRightEye.position.set(0.24, 0.22, 0.7);
+    this.mainFaceGroup.add(this.mainRightEye);
 
-    const leftArmMesh = new THREE.Mesh(armGeo, darkMetalMaterial);
-    leftArmMesh.position.y = -0.4;
-    this.leftArmGroup.add(leftArmMesh);
+    // Normal Mouth (Cute Arc)
+    const mouthGeo = new THREE.TorusGeometry(0.12, 0.035, 12, 24, Math.PI);
+    this.mainMouthNormal = new THREE.Mesh(mouthGeo, faceDarkMaterial);
+    this.mainMouthNormal.rotation.x = Math.PI;
+    this.mainMouthNormal.position.set(0, 0.08, 0.72);
+    this.mainFaceGroup.add(this.mainMouthNormal);
 
-    this.leftHand = new THREE.Mesh(handGeo, this.cyanNeonMaterial);
-    this.leftHand.position.y = -0.85;
-    this.leftArmGroup.add(this.leftHand);
+    // Smile Mouth (Big Happy Oval)
+    const smileMouthGeo = new THREE.SphereGeometry(0.14, 16, 16);
+    this.mainMouthSmile = new THREE.Mesh(smileMouthGeo, faceDarkMaterial);
+    this.mainMouthSmile.scale.set(1.2, 0.8, 0.3);
+    this.mainMouthSmile.position.set(0, 0.05, 0.72);
+    this.mainMouthSmile.visible = false;
+    this.mainFaceGroup.add(this.mainMouthSmile);
 
-    // Right Arm Group
-    this.rightArmGroup = new THREE.Group();
-    this.rightArmGroup.position.set(0.75, -0.6, 0);
-    this.avatarGroup.add(this.rightArmGroup);
+    // Cry Mouth (Sad Wavy Arc)
+    const cryMouthGeo = new THREE.TorusGeometry(0.12, 0.035, 12, 24, Math.PI);
+    this.mainMouthCry = new THREE.Mesh(cryMouthGeo, faceDarkMaterial);
+    this.mainMouthCry.position.set(0, -0.02, 0.72);
+    this.mainMouthCry.visible = false;
+    this.mainFaceGroup.add(this.mainMouthCry);
 
-    const rightArmMesh = new THREE.Mesh(armGeo, darkMetalMaterial);
-    rightArmMesh.position.y = -0.4;
-    this.rightArmGroup.add(rightArmMesh);
+    // Arms for Covering Eyes
+    const armGeo = new THREE.CapsuleGeometry(0.12, 0.4, 8, 16);
+    this.mainLeftArm = new THREE.Mesh(armGeo, this.ghostMaterial);
+    this.mainLeftArm.position.set(-0.8, -0.2, 0.2);
+    this.mainGhostGroup.add(this.mainLeftArm);
 
-    this.rightHand = new THREE.Mesh(handGeo, this.cyanNeonMaterial);
-    this.rightHand.position.y = -0.85;
-    this.rightArmGroup.add(this.rightHand);
+    this.mainRightArm = new THREE.Mesh(armGeo, this.ghostMaterial);
+    this.mainRightArm.position.set(0.8, -0.2, 0.2);
+    this.mainGhostGroup.add(this.mainRightArm);
+
+
+    // ================= 2. MINI GHOST COMPANION =================
+    this.miniGhostGroup = new THREE.Group();
+    this.miniGhostGroup.position.set(-0.95, -0.35, 0.2);
+    this.ghostsGroup.add(this.miniGhostGroup);
+
+    const miniHeadGeo = new THREE.SphereGeometry(0.48, 24, 24);
+    const miniHeadMesh = new THREE.Mesh(miniHeadGeo, this.ghostMaterial);
+    this.miniGhostGroup.add(miniHeadMesh);
+
+    const miniBodyGeo = new THREE.CylinderGeometry(0.48, 0.55, 0.55, 24);
+    const miniBodyMesh = new THREE.Mesh(miniBodyGeo, this.ghostMaterial);
+    miniBodyMesh.position.y = -0.28;
+    this.miniGhostGroup.add(miniBodyMesh);
+
+    // Mini Ghost Cheeks
+    const miniCheekGeo = new THREE.SphereGeometry(0.075, 12, 12);
+    const miniLeftCheek = new THREE.Mesh(miniCheekGeo, blushMaterial);
+    miniLeftCheek.position.set(-0.25, 0.02, 0.42);
+    this.miniGhostGroup.add(miniLeftCheek);
+
+    const miniRightCheek = new THREE.Mesh(miniCheekGeo, blushMaterial);
+    miniRightCheek.position.set(0.25, 0.02, 0.42);
+    this.miniGhostGroup.add(miniRightCheek);
+
+    // Mini Ghost Eyes & Mouth
+    const miniEyeGeo = new THREE.SphereGeometry(0.065, 12, 12);
+    this.miniLeftEye = new THREE.Mesh(miniEyeGeo, faceDarkMaterial);
+    this.miniLeftEye.position.set(-0.16, 0.14, 0.44);
+    this.miniGhostGroup.add(this.miniLeftEye);
+
+    this.miniRightEye = new THREE.Mesh(miniEyeGeo, faceDarkMaterial);
+    this.miniRightEye.position.set(0.16, 0.14, 0.44);
+    this.miniGhostGroup.add(this.miniRightEye);
+
+    const miniMouthGeo = new THREE.TorusGeometry(0.08, 0.025, 12, 24, Math.PI);
+    this.miniMouth = new THREE.Mesh(miniMouthGeo, faceDarkMaterial);
+    this.miniMouth.rotation.x = Math.PI;
+    this.miniMouth.position.set(0, 0.04, 0.46);
+    this.miniGhostGroup.add(this.miniMouth);
+
+
+    // ================= 3. ANIMATED TEARDROPS (CRY MODE) =================
+    const dropGeo = new THREE.ConeGeometry(0.06, 0.18, 12);
+    for (let i = 0; i < 6; i++) {
+      const drop = new THREE.Mesh(dropGeo, tearMaterial);
+      drop.rotation.x = Math.PI;
+      drop.visible = false;
+      this.scene.add(drop);
+      this.teardrops.push(drop);
+    }
   }
 
   bindEvents() {
@@ -1326,97 +1369,133 @@ class AuthAvatar3DEngine {
   }
 
   setCoverEyes(cover) {
-    this.isCoveringEyes = cover;
+    if (this.state === "smile" || this.state === "cry") return;
+    this.state = cover ? "cover" : "normal";
+
     const statusText = document.getElementById("avatar-status-text");
     const hintText = document.getElementById("avatar-hint");
     if (cover) {
-      if (statusText) statusText.textContent = "No Peeking! 🙈";
-      if (hintText) hintText.textContent = "Password hidden from 3D cyber eyes";
+      if (statusText) statusText.textContent = "No Peeking! 👻🙈";
+      if (hintText) hintText.textContent = "Password hidden from cute ghosts";
     } else {
-      if (statusText) statusText.textContent = "Watching... 👁️";
-      if (hintText) hintText.textContent = "Move cursor or type details";
+      if (statusText) statusText.textContent = "Happy Ghosts... 👻";
+      if (hintText) hintText.textContent = "Type details, smile on login, cry on wrong pwd";
     }
   }
 
-  triggerError() {
-    this.isShakingError = true;
-    this.errorTimer = performance.now();
+  triggerCryError() {
+    this.state = "cry";
+    this.timer = performance.now();
+
     const statusText = document.getElementById("avatar-status-text");
-    if (statusText) statusText.textContent = "Access Denied! ❌";
-    
-    // Visor turns red
-    if (this.visorMesh) this.visorMesh.material.emissive.setHex(0xef4444);
+    const hintText = document.getElementById("avatar-hint");
+    if (statusText) statusText.textContent = "Wrong Password! Ghosts Crying 😭💔";
+    if (hintText) hintText.textContent = "Oh no! Incorrect password entered";
+
+    // Show crying mouth
+    this.mainMouthNormal.visible = false;
+    this.mainMouthSmile.visible = false;
+    this.mainMouthCry.visible = true;
+
+    // Show animated teardrops
+    this.teardrops.forEach((d, i) => {
+      d.visible = true;
+      d.position.set(
+        (i % 2 === 0 ? 0.16 : 0.64) + (Math.random() - 0.5) * 0.1,
+        0.1,
+        0.75
+      );
+    });
   }
 
-  triggerSuccess() {
-    this.isSpinningSuccess = true;
-    this.spinTimer = performance.now();
+  triggerSmileSuccess() {
+    this.state = "smile";
+    this.timer = performance.now();
+
     const statusText = document.getElementById("avatar-status-text");
-    if (statusText) statusText.textContent = "Access Granted! 🎉";
-    
-    // Visor turns neon emerald
-    if (this.visorMesh) this.visorMesh.material.emissive.setHex(0x00ff9d);
+    const hintText = document.getElementById("avatar-hint");
+    if (statusText) statusText.textContent = "Yay! Login Success! 😊🎉";
+    if (hintText) hintText.textContent = "Welcome back! Ghosts are super happy";
+
+    // Show big smile mouth
+    this.mainMouthNormal.visible = false;
+    this.mainMouthCry.visible = false;
+    this.mainMouthSmile.visible = true;
+
+    // Hide teardrops
+    this.teardrops.forEach((d) => (d.visible = false));
   }
 
-  resetVisorColor() {
-    if (this.visorMesh) this.visorMesh.material.emissive.setHex(0x00f3ff);
+  resetState() {
+    this.state = "normal";
+    this.mainMouthNormal.visible = true;
+    this.mainMouthSmile.visible = false;
+    this.mainMouthCry.visible = false;
+    this.teardrops.forEach((d) => (d.visible = false));
   }
 
   animate() {
     requestAnimationFrame(() => this.animate());
 
-    const time = performance.now() * 0.0015;
+    const time = performance.now() * 0.002;
 
-    // Smooth lerp cursor tracking
+    // Smooth cursor tracking
     this.currentMouse.x += (this.targetMouse.x - this.currentMouse.x) * 0.08;
     this.currentMouse.y += (this.targetMouse.y - this.currentMouse.y) * 0.08;
 
-    // Breathing float
-    this.avatarGroup.position.y = Math.sin(time * 2.2) * 0.07;
+    // Floating bobbing motion
+    this.mainGhostGroup.position.y = -0.1 + Math.sin(time * 2.5) * 0.08;
+    this.miniGhostGroup.position.y = -0.35 + Math.sin(time * 2.8 + 1.0) * 0.06;
 
-    if (this.isSpinningSuccess) {
-      const elapsed = performance.now() - this.spinTimer;
-      this.avatarGroup.rotation.y += 0.28;
-      if (elapsed > 1200) {
-        this.isSpinningSuccess = false;
-        this.avatarGroup.rotation.y = 0;
-        this.resetVisorColor();
+    if (this.state === "smile") {
+      const elapsed = performance.now() - this.timer;
+      // Joyful victory bounce
+      this.mainGhostGroup.position.y = -0.1 + Math.abs(Math.sin(time * 8)) * 0.25;
+      this.miniGhostGroup.position.y = -0.35 + Math.abs(Math.cos(time * 8)) * 0.25;
+      this.mainGhostGroup.rotation.z = Math.sin(time * 6) * 0.15;
+      this.miniGhostGroup.rotation.z = -Math.sin(time * 6) * 0.15;
+
+      if (elapsed > 2500) {
+        this.resetState();
       }
-    } else if (this.isShakingError) {
-      const elapsed = performance.now() - this.errorTimer;
-      this.headGroup.rotation.y = Math.sin(elapsed * 0.035) * 0.45;
-      if (elapsed > 1000) {
-        this.isShakingError = false;
-        this.headGroup.rotation.y = 0;
-        this.resetVisorColor();
+    } else if (this.state === "cry") {
+      const elapsed = performance.now() - this.timer;
+
+      // Shivering tremble animation
+      this.mainGhostGroup.rotation.z = Math.sin(elapsed * 0.04) * 0.12;
+      this.miniGhostGroup.rotation.z = -Math.sin(elapsed * 0.04) * 0.12;
+      this.mainGhostGroup.position.x = 0.4 + Math.sin(elapsed * 0.05) * 0.04;
+
+      // Animate falling teardrops
+      this.teardrops.forEach((drop, idx) => {
+        drop.position.y -= 0.035;
+        if (drop.position.y < -1.2) {
+          drop.position.y = 0.1;
+        }
+      });
+
+      if (elapsed > 2500) {
+        this.resetState();
       }
-    } else if (this.isCoveringEyes) {
-      // Tilt head slightly
-      this.headGroup.rotation.x = 0.22;
-      this.headGroup.rotation.y = 0;
+    } else if (this.state === "cover") {
+      // Cover eyes with arms
+      this.mainLeftArm.rotation.z += (Math.PI * 0.45 - this.mainLeftArm.rotation.z) * 0.15;
+      this.mainLeftArm.rotation.x += (0.6 - this.mainLeftArm.rotation.x) * 0.15;
 
-      // Raise arms to visor
-      this.leftArmGroup.rotation.z += (Math.PI * 0.65 - this.leftArmGroup.rotation.z) * 0.15;
-      this.leftArmGroup.rotation.x += (0.5 - this.leftArmGroup.rotation.x) * 0.15;
-
-      this.rightArmGroup.rotation.z += (-Math.PI * 0.65 - this.rightArmGroup.rotation.z) * 0.15;
-      this.rightArmGroup.rotation.x += (0.5 - this.rightArmGroup.rotation.x) * 0.15;
+      this.mainRightArm.rotation.z += (-Math.PI * 0.45 - this.mainRightArm.rotation.z) * 0.15;
+      this.mainRightArm.rotation.x += (0.6 - this.mainRightArm.rotation.x) * 0.15;
     } else {
-      // Head cursor tracking
-      this.headGroup.rotation.y = this.currentMouse.x * 0.5;
-      this.headGroup.rotation.x = this.currentMouse.y * 0.35;
+      // Normal Head & Face tracking cursor
+      this.mainFaceGroup.rotation.y = this.currentMouse.x * 0.35;
+      this.mainFaceGroup.rotation.x = this.currentMouse.y * 0.25;
 
-      // Return arms to idle
-      this.leftArmGroup.rotation.z += (0 - this.leftArmGroup.rotation.z) * 0.1;
-      this.leftArmGroup.rotation.x += (0 - this.leftArmGroup.rotation.x) * 0.1;
-      this.rightArmGroup.rotation.z += (0 - this.rightArmGroup.rotation.z) * 0.1;
-      this.rightArmGroup.rotation.x += (0 - this.rightArmGroup.rotation.x) * 0.1;
-    }
+      this.miniGhostGroup.rotation.y = this.currentMouse.x * 0.25;
 
-    // Emblem rotation
-    if (this.emblem) {
-      this.emblem.rotation.y += 0.03;
-      this.emblem.rotation.z += 0.02;
+      // Arms idle hanging
+      this.mainLeftArm.rotation.z += (0 - this.mainLeftArm.rotation.z) * 0.1;
+      this.mainLeftArm.rotation.x += (0 - this.mainLeftArm.rotation.x) * 0.1;
+      this.mainRightArm.rotation.z += (0 - this.mainRightArm.rotation.z) * 0.1;
+      this.mainRightArm.rotation.x += (0 - this.mainRightArm.rotation.x) * 0.1;
     }
 
     this.renderer.render(this.scene, this.camera);
@@ -1450,7 +1529,7 @@ function initAuthSystem() {
     authModal.classList.add("open");
     setAuthTab(mode);
 
-    // Initialize or resize 3D Avatar Engine
+    // Initialize or resize Spooky Ghost 3D Avatar Engine
     if (!authAvatarEngine) {
       authAvatarEngine = new AuthAvatar3DEngine("auth-avatar-canvas");
     } else {
@@ -1489,7 +1568,7 @@ function initAuthSystem() {
     if (e.target === authModal) closeModal();
   });
 
-  // Password Input Privacy Focus Listeners ("No Peeking! 🙈")
+  // Password Input Privacy Focus Listeners ("No Peeking! 👻🙈")
   if (loginInputPwd) {
     loginInputPwd.addEventListener("focus", () => {
       if (authAvatarEngine) authAvatarEngine.setCoverEyes(true);
@@ -1527,19 +1606,20 @@ function initAuthSystem() {
 
         if (!res.ok) {
           if (errorEl) errorEl.textContent = data.error || "Login failed.";
-          if (authAvatarEngine) authAvatarEngine.triggerError();
+          // TRIGGER CRY MODE ON WRONG PASSWORD 😭
+          if (authAvatarEngine) authAvatarEngine.triggerCryError();
           return;
         }
 
-        // Success
-        if (authAvatarEngine) authAvatarEngine.triggerSuccess();
+        // TRIGGER SMILE MODE ON SUCCESS 😊
+        if (authAvatarEngine) authAvatarEngine.triggerSmileSuccess();
         updateUserState(data.user);
         showToast(`🎉 Welcome back, ${data.user.username}!`, "success");
-        setTimeout(closeModal, 1200);
+        setTimeout(closeModal, 1800);
 
       } catch (err) {
         if (errorEl) errorEl.textContent = "Network error.";
-        if (authAvatarEngine) authAvatarEngine.triggerError();
+        if (authAvatarEngine) authAvatarEngine.triggerCryError();
       }
     });
   }
@@ -1564,19 +1644,19 @@ function initAuthSystem() {
 
         if (!res.ok) {
           if (errorEl) errorEl.textContent = data.error || "Registration failed.";
-          if (authAvatarEngine) authAvatarEngine.triggerError();
+          if (authAvatarEngine) authAvatarEngine.triggerCryError();
           return;
         }
 
-        // Success
-        if (authAvatarEngine) authAvatarEngine.triggerSuccess();
+        // TRIGGER SMILE MODE ON SUCCESS 😊
+        if (authAvatarEngine) authAvatarEngine.triggerSmileSuccess();
         updateUserState(data.user);
         showToast(`🎉 Account created! Welcome, ${data.user.username}!`, "success");
-        setTimeout(closeModal, 1200);
+        setTimeout(closeModal, 1800);
 
       } catch (err) {
         if (errorEl) errorEl.textContent = "Network error.";
-        if (authAvatarEngine) authAvatarEngine.triggerError();
+        if (authAvatarEngine) authAvatarEngine.triggerCryError();
       }
     });
   }
@@ -1656,5 +1736,6 @@ window.openAuthModal = function(mode = "login") {
     }
   }
 };
+
 
 
