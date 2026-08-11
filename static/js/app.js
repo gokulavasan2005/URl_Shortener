@@ -1394,15 +1394,24 @@ class AuthAvatar3DEngine {
     });
 
     window.addEventListener("resize", () => this.onResize());
+
+    // Observe container size changes when auth modal opens
+    if (window.ResizeObserver && this.wrapper) {
+      const ro = new ResizeObserver(() => this.onResize());
+      ro.observe(this.wrapper);
+    }
   }
 
   onResize() {
-    if (!this.wrapper) return;
-    this.width = this.wrapper.clientWidth || 300;
-    this.height = this.wrapper.clientHeight || 280;
-    this.camera.aspect = this.width / this.height;
+    if (!this.wrapper || !this.canvas) return;
+    const w = this.wrapper.clientWidth || this.canvas.clientWidth || 320;
+    const h = this.wrapper.clientHeight || this.canvas.clientHeight || 280;
+    if (w <= 0 || h <= 0) return;
+    this.width = w;
+    this.height = h;
+    this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(this.width, this.height);
+    this.renderer.setSize(w, h);
   }
 
   setCoverEyes(cover) {
@@ -1574,12 +1583,15 @@ function initAuthSystem() {
     authModal.classList.add("open");
     setAuthTab(mode);
 
-    // Initialize or resize Spooky Ghost 3D Avatar Engine
-    if (!authAvatarEngine) {
-      authAvatarEngine = new AuthAvatar3DEngine("auth-avatar-canvas");
-    } else {
-      setTimeout(() => authAvatarEngine.onResize(), 100);
-    }
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        if (!authAvatarEngine) {
+          authAvatarEngine = new AuthAvatar3DEngine("auth-avatar-canvas");
+        } else {
+          authAvatarEngine.onResize();
+        }
+      }, 50);
+    });
   }
 
   function closeModal() {
@@ -1774,11 +1786,15 @@ window.openAuthModal = function(mode = "login") {
       if (loginForm) loginForm.style.display = "none";
     }
 
-    if (!authAvatarEngine) {
-      authAvatarEngine = new AuthAvatar3DEngine("auth-avatar-canvas");
-    } else {
-      setTimeout(() => authAvatarEngine.onResize(), 100);
-    }
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        if (!authAvatarEngine) {
+          authAvatarEngine = new AuthAvatar3DEngine("auth-avatar-canvas");
+        } else {
+          authAvatarEngine.onResize();
+        }
+      }, 50);
+    });
   }
 };
 

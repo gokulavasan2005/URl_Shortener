@@ -1709,13 +1709,18 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 .avatar-canvas-wrapper {
   flex: 1;
   position: relative;
+  width: 100%;
   min-height: 280px;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
 #auth-avatar-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100% !important;
   height: 100% !important;
   display: block;
