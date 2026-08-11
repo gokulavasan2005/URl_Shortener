@@ -1421,3 +1421,345 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   .search-input { width: 100%; }
   .result-short-url { flex-direction: column; align-items: flex-start; }
 }
+
+/* =========================================================
+   ELECTRIC BORDER EFFECT SYSTEM
+   ========================================================= */
+
+:root {
+  --electric-cyan: #00f3ff;
+  --electric-cyan-glow: rgba(0, 243, 255, 0.75);
+  --electric-cyan-bg: rgba(0, 243, 255, 0.05);
+
+  --electric-gold: #ffe600;
+  --electric-gold-glow: rgba(255, 230, 0, 0.75);
+  --electric-gold-bg: rgba(255, 230, 0, 0.05);
+
+  --electric-purple: #d8b4fe;
+  --electric-purple-glow: rgba(216, 180, 254, 0.75);
+  --electric-purple-bg: rgba(216, 180, 254, 0.05);
+
+  --electric-emerald: #00ff9d;
+  --electric-emerald-glow: rgba(0, 255, 157, 0.75);
+  --electric-emerald-bg: rgba(0, 255, 157, 0.05);
+
+  /* Active electric color theme defaults */
+  --electric-color: var(--electric-cyan);
+  --electric-glow: var(--electric-cyan-glow);
+  --electric-bg: var(--electric-cyan-bg);
+}
+
+/* Color Theme Modifiers */
+.electric-theme-cyan,
+[data-electric-active="cyan"] {
+  --electric-color: #00f3ff;
+  --electric-glow: rgba(0, 243, 255, 0.75);
+  --electric-bg: rgba(0, 243, 255, 0.05);
+}
+
+.electric-theme-gold,
+[data-electric-active="gold"] {
+  --electric-color: #ffe600;
+  --electric-glow: rgba(255, 230, 0, 0.75);
+  --electric-bg: rgba(255, 230, 0, 0.05);
+}
+
+.electric-theme-purple,
+[data-electric-active="purple"] {
+  --electric-color: #d8b4fe;
+  --electric-glow: rgba(216, 180, 254, 0.75);
+  --electric-bg: rgba(216, 180, 254, 0.05);
+}
+
+.electric-theme-emerald,
+[data-electric-active="emerald"] {
+  --electric-color: #00ff9d;
+  --electric-glow: rgba(0, 255, 157, 0.75);
+  --electric-bg: rgba(0, 255, 157, 0.05);
+}
+
+/* Electric Card Container */
+.electric-card {
+  position: relative;
+  background: var(--bg-surface);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.85),
+              0 0 30px -5px var(--electric-glow);
+  transition: box-shadow 0.4s ease, border-color 0.4s ease;
+  overflow: visible !important;
+}
+
+/* Electric Border Glow (Turbulent SVG distortion line) */
+.electric-border-glow {
+  position: absolute;
+  inset: -3px;
+  border-radius: calc(var(--radius-xl) + 3px);
+  pointer-events: none;
+  z-index: 2;
+  border: 2px solid var(--electric-color);
+  filter: url(#electric-displace) 
+          drop-shadow(0 0 6px var(--electric-color))
+          drop-shadow(0 0 16px var(--electric-glow));
+  opacity: 0.95;
+  animation: electricPulse 3s infinite ease-in-out alternate;
+  transition: border-color 0.4s ease, filter 0.4s ease;
+}
+
+/* Outer Glow Halo */
+.electric-card::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--electric-color);
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 1;
+  box-shadow: inset 0 0 20px var(--electric-bg),
+              0 0 25px var(--electric-glow);
+  transition: border-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+/* Badge (matching reference reel design in screenshot) */
+.electric-badge {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  z-index: 10;
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 12px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #ffffff;
+  text-transform: uppercase;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  pointer-events: none;
+}
+
+/* Electric Theme Bar Controls */
+.electric-theme-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 2rem 0 1rem 0;
+  padding: 0.75rem 1.25rem;
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg);
+  flex-wrap: wrap;
+}
+
+.electric-bar-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.electric-theme-options {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.electric-theme-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.electric-theme-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.electric-theme-btn.active {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: var(--electric-color);
+  color: var(--text-primary);
+  box-shadow: 0 0 14px var(--electric-glow);
+}
+
+.color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.color-dot.cyan { background: #00f3ff; box-shadow: 0 0 6px #00f3ff; }
+.color-dot.gold { background: #ffe600; box-shadow: 0 0 6px #ffe600; }
+.color-dot.purple { background: #d8b4fe; box-shadow: 0 0 6px #d8b4fe; }
+.color-dot.emerald { background: #00ff9d; box-shadow: 0 0 6px #00ff9d; }
+
+/* Dynamic Animations & Shockwave */
+@keyframes electricPulse {
+  0% {
+    opacity: 0.85;
+    filter: url(#electric-displace) 
+            drop-shadow(0 0 5px var(--electric-color))
+            drop-shadow(0 0 14px var(--electric-glow));
+  }
+  50% {
+    opacity: 1;
+    filter: url(#electric-displace-intense) 
+            drop-shadow(0 0 10px var(--electric-color))
+            drop-shadow(0 0 25px var(--electric-glow));
+  }
+  100% {
+    opacity: 0.85;
+    filter: url(#electric-displace) 
+            drop-shadow(0 0 5px var(--electric-color))
+            drop-shadow(0 0 14px var(--electric-glow));
+  }
+}
+
+.electric-burst {
+  animation: shockwaveBurst 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes shockwaveBurst {
+  0% {
+    box-shadow: 0 0 0 0 var(--electric-glow);
+  }
+  50% {
+    box-shadow: 0 0 70px 25px var(--electric-glow);
+  }
+  100% {
+    box-shadow: 0 0 30px -5px var(--electric-glow);
+  }
+}
+
+/* =========================================================
+   3D AUTH MODAL & CYBER AVATAR SYSTEM
+   ========================================================= */
+
+.auth-modal-wrapper {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  min-height: 440px;
+  background: var(--bg-surface);
+}
+
+.auth-avatar-col {
+  position: relative;
+  background: radial-gradient(circle at center, rgba(0, 243, 255, 0.08) 0%, rgba(15, 15, 26, 0.95) 100%);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.25rem;
+  overflow: hidden;
+}
+
+.avatar-hud-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  z-index: 5;
+}
+
+.avatar-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--text-primary);
+}
+
+.avatar-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--electric-color);
+  box-shadow: 0 0 6px var(--electric-color);
+}
+
+.avatar-status-text {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.avatar-canvas-wrapper {
+  flex: 1;
+  position: relative;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#auth-avatar-canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  cursor: grab;
+}
+
+#auth-avatar-canvas:active {
+  cursor: grabbing;
+}
+
+.avatar-hud-bottom {
+  text-align: center;
+  z-index: 5;
+}
+
+.avatar-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: inline-block;
+}
+
+.auth-form-col {
+  padding: 2rem 2.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+@media (max-width: 720px) {
+  .auth-modal-wrapper {
+    grid-template-columns: 1fr;
+  }
+  .auth-avatar-col {
+    min-height: 220px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .avatar-canvas-wrapper {
+    min-height: 190px;
+  }
+}
+
+

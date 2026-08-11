@@ -152,12 +152,13 @@ shortenForm.addEventListener("submit", async (e) => {
 
     // Show result card
     showResult(data);
-    showToast("✅ Short link created!", "success");
+    showToast("⚡ Short link created with Electric Speed!", "success");
 
-    // Trigger 3D Hologram Burst Effect
+    // Trigger 3D Hologram Burst Effect & Electric Shockwave
     if (window.hologramEngine) {
       window.hologramEngine.burst();
     }
+    triggerElectricBurst();
 
     // Reset form (keep URL, clear alias + expiry)
     inputAlias.value  = "";
@@ -1075,4 +1076,585 @@ class HologramEngine {
     this.renderer.render(this.scene, this.camera);
   }
 }
+
+/* =========================================================
+   ELECTRIC BORDER EFFECT CONTROLLER
+   ========================================================= */
+
+function triggerElectricBurst() {
+  const cards = document.querySelectorAll(".electric-card");
+  cards.forEach((card) => {
+    card.classList.remove("electric-burst");
+    void card.offsetWidth; // Force reflow
+    card.classList.add("electric-burst");
+  });
+}
+
+function initElectricThemeSwitcher() {
+  const themeBtns = document.querySelectorAll(".electric-theme-btn");
+  if (!themeBtns.length) return;
+
+  themeBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const theme = btn.dataset.electricTheme;
+      if (!theme) return;
+
+      // Update button active state
+      themeBtns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      // Update all electric cards
+      const electricCards = document.querySelectorAll(".electric-card");
+      electricCards.forEach((card) => {
+        card.classList.remove(
+          "electric-theme-cyan",
+          "electric-theme-gold",
+          "electric-theme-purple",
+          "electric-theme-emerald"
+        );
+        card.classList.add(`electric-theme-${theme}`);
+        card.setAttribute("data-electric-active", theme);
+      });
+
+      // Trigger electric burst shockwave
+      triggerElectricBurst();
+    });
+  });
+}
+
+// Initialize on DOM ready
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    initElectricThemeSwitcher();
+    initAuthSystem();
+  });
+} else {
+  initElectricThemeSwitcher();
+  initAuthSystem();
+}
+
+/* =========================================================
+   3D AUTH AVATAR ENGINE (Three.js WebGL)
+   ========================================================= */
+class AuthAvatar3DEngine {
+  constructor(canvasId) {
+    this.canvas = document.getElementById(canvasId);
+    if (!this.canvas) return;
+
+    this.wrapper = this.canvas.parentElement;
+    this.width = this.wrapper.clientWidth || 300;
+    this.height = this.wrapper.clientHeight || 280;
+
+    this.targetMouse = { x: 0, y: 0 };
+    this.currentMouse = { x: 0, y: 0 };
+
+    this.isCoveringEyes = false;
+    this.isShakingError = false;
+    this.isSpinningSuccess = false;
+    this.errorTimer = 0;
+    this.spinTimer = 0;
+
+    this.initScene();
+    this.createAvatar();
+    this.bindEvents();
+    this.animate();
+  }
+
+  initScene() {
+    this.scene = new THREE.Scene();
+
+    this.camera = new THREE.PerspectiveCamera(45, this.width / this.height, 0.1, 100);
+    this.camera.position.set(0, 0.3, 5.0);
+
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: this.canvas,
+      alpha: true,
+      antialias: true,
+      powerPreference: "high-performance",
+    });
+    this.renderer.setSize(this.width, this.height);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0x505070, 1.8);
+    this.scene.add(ambientLight);
+
+    const cyanPointLight = new THREE.PointLight(0x00f3ff, 2.8, 12);
+    cyanPointLight.position.set(-2.5, 2.5, 3.5);
+    this.scene.add(cyanPointLight);
+
+    const purplePointLight = new THREE.PointLight(0x7c3aed, 2.2, 10);
+    purplePointLight.position.set(2.5, -1.5, 3.5);
+    this.scene.add(purplePointLight);
+
+    const rimLight = new THREE.DirectionalLight(0xffffff, 1.4);
+    rimLight.position.set(0, 4, -3);
+    this.scene.add(rimLight);
+  }
+
+  createAvatar() {
+    this.avatarGroup = new THREE.Group();
+    this.scene.add(this.avatarGroup);
+
+    // Materials
+    const darkMetalMaterial = new THREE.MeshStandardMaterial({
+      color: 0x161625,
+      roughness: 0.25,
+      metalness: 0.85,
+    });
+
+    const bodyArmorMaterial = new THREE.MeshStandardMaterial({
+      color: 0x0f0f1a,
+      roughness: 0.35,
+      metalness: 0.75,
+    });
+
+    this.cyanNeonMaterial = new THREE.MeshStandardMaterial({
+      color: 0x00f3ff,
+      emissive: 0x00f3ff,
+      emissiveIntensity: 0.95,
+      roughness: 0.2,
+    });
+
+    const eyeMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0x00f3ff,
+      emissiveIntensity: 1.3,
+    });
+
+    // 1. Torso & Armor
+    const torsoGeo = new THREE.CylinderGeometry(0.62, 0.45, 1.25, 16);
+    this.torso = new THREE.Mesh(torsoGeo, bodyArmorMaterial);
+    this.torso.position.y = -1.15;
+    this.avatarGroup.add(this.torso);
+
+    // Chest Emblem Core
+    const emblemGeo = new THREE.OctahedronGeometry(0.18, 0);
+    this.emblem = new THREE.Mesh(emblemGeo, this.cyanNeonMaterial);
+    this.emblem.position.set(0, -0.85, 0.48);
+    this.avatarGroup.add(this.emblem);
+
+    // 2. Head Assembly
+    this.headGroup = new THREE.Group();
+    this.headGroup.position.y = 0.25;
+    this.avatarGroup.add(this.headGroup);
+
+    // Stylized Head
+    const headGeo = new THREE.BoxGeometry(1.25, 1.15, 1.15);
+    this.headMesh = new THREE.Mesh(headGeo, darkMetalMaterial);
+    this.headGroup.add(this.headMesh);
+
+    // Visor Shield
+    const visorGeo = new THREE.BoxGeometry(1.1, 0.4, 0.16);
+    this.visorMesh = new THREE.Mesh(visorGeo, this.cyanNeonMaterial);
+    this.visorMesh.position.set(0, 0.1, 0.54);
+    this.headGroup.add(this.visorMesh);
+
+    // Glowing Eyes
+    const eyeGeo = new THREE.SphereGeometry(0.085, 12, 12);
+    this.leftEye = new THREE.Mesh(eyeGeo, eyeMaterial);
+    this.leftEye.position.set(-0.26, 0.1, 0.62);
+    this.headGroup.add(this.leftEye);
+
+    this.rightEye = new THREE.Mesh(eyeGeo, eyeMaterial);
+    this.rightEye.position.set(0.26, 0.1, 0.62);
+    this.headGroup.add(this.rightEye);
+
+    // Floating Ears/Antennas
+    const earGeo = new THREE.TorusGeometry(0.24, 0.05, 12, 24);
+    const leftEar = new THREE.Mesh(earGeo, this.cyanNeonMaterial);
+    leftEar.rotation.y = Math.PI / 2;
+    leftEar.position.set(-0.68, 0.1, 0);
+    this.headGroup.add(leftEar);
+
+    const rightEar = new THREE.Mesh(earGeo, this.cyanNeonMaterial);
+    rightEar.rotation.y = Math.PI / 2;
+    rightEar.position.set(0.68, 0.1, 0);
+    this.headGroup.add(rightEar);
+
+    // 3. Arms & Hands for Eye-Covering
+    const armGeo = new THREE.CylinderGeometry(0.12, 0.1, 0.9, 12);
+    const handGeo = new THREE.SphereGeometry(0.2, 14, 14);
+
+    // Left Arm Group
+    this.leftArmGroup = new THREE.Group();
+    this.leftArmGroup.position.set(-0.75, -0.6, 0);
+    this.avatarGroup.add(this.leftArmGroup);
+
+    const leftArmMesh = new THREE.Mesh(armGeo, darkMetalMaterial);
+    leftArmMesh.position.y = -0.4;
+    this.leftArmGroup.add(leftArmMesh);
+
+    this.leftHand = new THREE.Mesh(handGeo, this.cyanNeonMaterial);
+    this.leftHand.position.y = -0.85;
+    this.leftArmGroup.add(this.leftHand);
+
+    // Right Arm Group
+    this.rightArmGroup = new THREE.Group();
+    this.rightArmGroup.position.set(0.75, -0.6, 0);
+    this.avatarGroup.add(this.rightArmGroup);
+
+    const rightArmMesh = new THREE.Mesh(armGeo, darkMetalMaterial);
+    rightArmMesh.position.y = -0.4;
+    this.rightArmGroup.add(rightArmMesh);
+
+    this.rightHand = new THREE.Mesh(handGeo, this.cyanNeonMaterial);
+    this.rightHand.position.y = -0.85;
+    this.rightArmGroup.add(this.rightHand);
+  }
+
+  bindEvents() {
+    window.addEventListener("mousemove", (e) => {
+      if (!this.canvas) return;
+      const rect = this.canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / (rect.width || 1) - 0.5;
+      const y = (e.clientY - rect.top) / (rect.height || 1) - 0.5;
+      this.targetMouse.x = x * 2.2;
+      this.targetMouse.y = y * 2.2;
+    });
+
+    window.addEventListener("resize", () => this.onResize());
+  }
+
+  onResize() {
+    if (!this.wrapper) return;
+    this.width = this.wrapper.clientWidth || 300;
+    this.height = this.wrapper.clientHeight || 280;
+    this.camera.aspect = this.width / this.height;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(this.width, this.height);
+  }
+
+  setCoverEyes(cover) {
+    this.isCoveringEyes = cover;
+    const statusText = document.getElementById("avatar-status-text");
+    const hintText = document.getElementById("avatar-hint");
+    if (cover) {
+      if (statusText) statusText.textContent = "No Peeking! 🙈";
+      if (hintText) hintText.textContent = "Password hidden from 3D cyber eyes";
+    } else {
+      if (statusText) statusText.textContent = "Watching... 👁️";
+      if (hintText) hintText.textContent = "Move cursor or type details";
+    }
+  }
+
+  triggerError() {
+    this.isShakingError = true;
+    this.errorTimer = performance.now();
+    const statusText = document.getElementById("avatar-status-text");
+    if (statusText) statusText.textContent = "Access Denied! ❌";
+    
+    // Visor turns red
+    if (this.visorMesh) this.visorMesh.material.emissive.setHex(0xef4444);
+  }
+
+  triggerSuccess() {
+    this.isSpinningSuccess = true;
+    this.spinTimer = performance.now();
+    const statusText = document.getElementById("avatar-status-text");
+    if (statusText) statusText.textContent = "Access Granted! 🎉";
+    
+    // Visor turns neon emerald
+    if (this.visorMesh) this.visorMesh.material.emissive.setHex(0x00ff9d);
+  }
+
+  resetVisorColor() {
+    if (this.visorMesh) this.visorMesh.material.emissive.setHex(0x00f3ff);
+  }
+
+  animate() {
+    requestAnimationFrame(() => this.animate());
+
+    const time = performance.now() * 0.0015;
+
+    // Smooth lerp cursor tracking
+    this.currentMouse.x += (this.targetMouse.x - this.currentMouse.x) * 0.08;
+    this.currentMouse.y += (this.targetMouse.y - this.currentMouse.y) * 0.08;
+
+    // Breathing float
+    this.avatarGroup.position.y = Math.sin(time * 2.2) * 0.07;
+
+    if (this.isSpinningSuccess) {
+      const elapsed = performance.now() - this.spinTimer;
+      this.avatarGroup.rotation.y += 0.28;
+      if (elapsed > 1200) {
+        this.isSpinningSuccess = false;
+        this.avatarGroup.rotation.y = 0;
+        this.resetVisorColor();
+      }
+    } else if (this.isShakingError) {
+      const elapsed = performance.now() - this.errorTimer;
+      this.headGroup.rotation.y = Math.sin(elapsed * 0.035) * 0.45;
+      if (elapsed > 1000) {
+        this.isShakingError = false;
+        this.headGroup.rotation.y = 0;
+        this.resetVisorColor();
+      }
+    } else if (this.isCoveringEyes) {
+      // Tilt head slightly
+      this.headGroup.rotation.x = 0.22;
+      this.headGroup.rotation.y = 0;
+
+      // Raise arms to visor
+      this.leftArmGroup.rotation.z += (Math.PI * 0.65 - this.leftArmGroup.rotation.z) * 0.15;
+      this.leftArmGroup.rotation.x += (0.5 - this.leftArmGroup.rotation.x) * 0.15;
+
+      this.rightArmGroup.rotation.z += (-Math.PI * 0.65 - this.rightArmGroup.rotation.z) * 0.15;
+      this.rightArmGroup.rotation.x += (0.5 - this.rightArmGroup.rotation.x) * 0.15;
+    } else {
+      // Head cursor tracking
+      this.headGroup.rotation.y = this.currentMouse.x * 0.5;
+      this.headGroup.rotation.x = this.currentMouse.y * 0.35;
+
+      // Return arms to idle
+      this.leftArmGroup.rotation.z += (0 - this.leftArmGroup.rotation.z) * 0.1;
+      this.leftArmGroup.rotation.x += (0 - this.leftArmGroup.rotation.x) * 0.1;
+      this.rightArmGroup.rotation.z += (0 - this.rightArmGroup.rotation.z) * 0.1;
+      this.rightArmGroup.rotation.x += (0 - this.rightArmGroup.rotation.x) * 0.1;
+    }
+
+    // Emblem rotation
+    if (this.emblem) {
+      this.emblem.rotation.y += 0.03;
+      this.emblem.rotation.z += 0.02;
+    }
+
+    this.renderer.render(this.scene, this.camera);
+  }
+}
+
+/* =========================================================
+   AUTH MODAL & SESSION MANAGER
+   ========================================================= */
+let authAvatarEngine = null;
+
+function initAuthSystem() {
+  const authModal = document.getElementById("auth-modal");
+  const openLoginBtn = document.getElementById("open-login-btn");
+  const openRegisterBtn = document.getElementById("open-register-btn");
+  const closeAuthBtn = document.getElementById("auth-modal-close");
+  const tabLogin = document.getElementById("auth-tab-login");
+  const tabRegister = document.getElementById("auth-tab-register");
+
+  const loginForm = document.getElementById("login-form");
+  const registerForm = document.getElementById("register-form");
+
+  const loginInputPwd = document.getElementById("login-input-pwd");
+  const regInputPwd = document.getElementById("reg-input-pwd");
+
+  const logoutBtn = document.getElementById("logout-btn");
+
+  if (!authModal) return;
+
+  function openModal(mode = "login") {
+    authModal.classList.add("open");
+    setAuthTab(mode);
+
+    // Initialize or resize 3D Avatar Engine
+    if (!authAvatarEngine) {
+      authAvatarEngine = new AuthAvatar3DEngine("auth-avatar-canvas");
+    } else {
+      setTimeout(() => authAvatarEngine.onResize(), 100);
+    }
+  }
+
+  function closeModal() {
+    authModal.classList.remove("open");
+    if (authAvatarEngine) authAvatarEngine.setCoverEyes(false);
+  }
+
+  function setAuthTab(tab) {
+    if (tab === "login") {
+      tabLogin.classList.add("active");
+      tabRegister.classList.remove("active");
+      loginForm.style.display = "block";
+      registerForm.style.display = "none";
+    } else {
+      tabRegister.classList.add("active");
+      tabLogin.classList.remove("active");
+      registerForm.style.display = "block";
+      loginForm.style.display = "none";
+    }
+  }
+
+  if (openLoginBtn) openLoginBtn.addEventListener("click", () => openModal("login"));
+  if (openRegisterBtn) openRegisterBtn.addEventListener("click", () => openModal("register"));
+  if (closeAuthBtn) closeAuthBtn.addEventListener("click", closeModal);
+
+  if (tabLogin) tabLogin.addEventListener("click", () => setAuthTab("login"));
+  if (tabRegister) tabRegister.addEventListener("click", () => setAuthTab("register"));
+
+  // Backdrop click to close
+  authModal.addEventListener("click", (e) => {
+    if (e.target === authModal) closeModal();
+  });
+
+  // Password Input Privacy Focus Listeners ("No Peeking! 🙈")
+  if (loginInputPwd) {
+    loginInputPwd.addEventListener("focus", () => {
+      if (authAvatarEngine) authAvatarEngine.setCoverEyes(true);
+    });
+    loginInputPwd.addEventListener("blur", () => {
+      if (authAvatarEngine) authAvatarEngine.setCoverEyes(false);
+    });
+  }
+
+  if (regInputPwd) {
+    regInputPwd.addEventListener("focus", () => {
+      if (authAvatarEngine) authAvatarEngine.setCoverEyes(true);
+    });
+    regInputPwd.addEventListener("blur", () => {
+      if (authAvatarEngine) authAvatarEngine.setCoverEyes(false);
+    });
+  }
+
+  // Handle Login Form Submission
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const loginId = document.getElementById("login-input-id").value.trim();
+      const pwd = loginInputPwd.value;
+      const errorEl = document.getElementById("login-error-msg");
+      if (errorEl) errorEl.textContent = "";
+
+      try {
+        const res = await fetch(API.login, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ login_id: loginId, password: pwd }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          if (errorEl) errorEl.textContent = data.error || "Login failed.";
+          if (authAvatarEngine) authAvatarEngine.triggerError();
+          return;
+        }
+
+        // Success
+        if (authAvatarEngine) authAvatarEngine.triggerSuccess();
+        updateUserState(data.user);
+        showToast(`🎉 Welcome back, ${data.user.username}!`, "success");
+        setTimeout(closeModal, 1200);
+
+      } catch (err) {
+        if (errorEl) errorEl.textContent = "Network error.";
+        if (authAvatarEngine) authAvatarEngine.triggerError();
+      }
+    });
+  }
+
+  // Handle Register Form Submission
+  if (registerForm) {
+    registerForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = document.getElementById("reg-input-user").value.trim();
+      const email = document.getElementById("reg-input-email").value.trim();
+      const pwd = regInputPwd.value;
+      const errorEl = document.getElementById("reg-error-msg");
+      if (errorEl) errorEl.textContent = "";
+
+      try {
+        const res = await fetch(API.register, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, email, password: pwd }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          if (errorEl) errorEl.textContent = data.error || "Registration failed.";
+          if (authAvatarEngine) authAvatarEngine.triggerError();
+          return;
+        }
+
+        // Success
+        if (authAvatarEngine) authAvatarEngine.triggerSuccess();
+        updateUserState(data.user);
+        showToast(`🎉 Account created! Welcome, ${data.user.username}!`, "success");
+        setTimeout(closeModal, 1200);
+
+      } catch (err) {
+        if (errorEl) errorEl.textContent = "Network error.";
+        if (authAvatarEngine) authAvatarEngine.triggerError();
+      }
+    });
+  }
+
+  // Handle Logout
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      try {
+        await fetch(API.logout, { method: "POST" });
+        updateUserState(null);
+        showToast("👋 Logged out successfully.", "info");
+      } catch (err) {
+        showToast("Failed to log out.", "danger");
+      }
+    });
+  }
+
+  // Check Current User Session on Load
+  checkSession();
+}
+
+async function checkSession() {
+  try {
+    const res = await fetch(API.me);
+    const data = await res.json();
+    if (res.ok && data.logged_in) {
+      updateUserState(data.user);
+    } else {
+      updateUserState(null);
+    }
+  } catch (err) {
+    updateUserState(null);
+  }
+}
+
+function updateUserState(user) {
+  currentUser = user;
+  const loggedOutDiv = document.getElementById("auth-logged-out");
+  const loggedInDiv = document.getElementById("auth-logged-in");
+  const userNameChip = document.getElementById("user-chip-name");
+
+  if (user) {
+    if (loggedOutDiv) loggedOutDiv.style.display = "none";
+    if (loggedInDiv) loggedInDiv.style.display = "flex";
+    if (userNameChip) userNameChip.textContent = `👤 ${user.username}`;
+  } else {
+    if (loggedOutDiv) loggedOutDiv.style.display = "flex";
+    if (loggedInDiv) loggedInDiv.style.display = "none";
+  }
+}
+
+window.openAuthModal = function(mode = "login") {
+  const modal = document.getElementById("auth-modal");
+  if (modal) {
+    modal.classList.add("open");
+    const tabLogin = document.getElementById("auth-tab-login");
+    const tabRegister = document.getElementById("auth-tab-register");
+    const loginForm = document.getElementById("login-form");
+    const registerForm = document.getElementById("register-form");
+
+    if (mode === "login") {
+      if (tabLogin) tabLogin.classList.add("active");
+      if (tabRegister) tabRegister.classList.remove("active");
+      if (loginForm) loginForm.style.display = "block";
+      if (registerForm) registerForm.style.display = "none";
+    } else {
+      if (tabRegister) tabRegister.classList.add("active");
+      if (tabLogin) tabLogin.classList.remove("active");
+      if (registerForm) registerForm.style.display = "block";
+      if (loginForm) loginForm.style.display = "none";
+    }
+
+    if (!authAvatarEngine) {
+      authAvatarEngine = new AuthAvatar3DEngine("auth-avatar-canvas");
+    } else {
+      setTimeout(() => authAvatarEngine.onResize(), 100);
+    }
+  }
+};
+
 
